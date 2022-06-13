@@ -8,3 +8,9 @@ pycoq.egg-info/
 pycoq/__pycache__/
 tests/data/
 venv/
+
+# added by Brando
+pycoq/test/autoagent/*.log
+build/
+serlib/
+.idea/
