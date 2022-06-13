@@ -10,7 +10,8 @@ tests/data/
 venv/
 
 # added by Brando
-pycoq/test/autoagent/*.log
+#pycoq/test/autoagent/*.log
+pycoq/test/autoagent/
 build/
 serlib/
 .idea/
