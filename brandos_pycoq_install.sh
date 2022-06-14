@@ -5,7 +5,7 @@
 # install brew
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 #  install wget to get miniconda
-brew install wget
+#brew install wget
 
 # - install miniconda
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O ~/miniconda.sh
@@ -17,14 +17,18 @@ conda init zsh
 conda update -n base -c defaults conda
 conda install conda-build
 
-conda create -n iit_synthesis python=3.9
-conda activate iit_synthesis
+conda create -n pycoq python=3.9
+conda activate pycoq
 #conda remove --name metalearning2 --all
+
+# - install pycoq
+pip install -e .
+#pip install -e ~/pycoq
 
 # - install opam
 #brew install opam
 # https://stackoverflow.com/questions/72522266/how-does-one-install-opam-with-conda-for-mac-apple-os-x
-#conda install -c conda-forge opam
+conda install -c conda-forge opam
 opam init
 # if doing local env? https://stackoverflow.com/questions/72522412/what-does-eval-opam-env-do-does-it-activate-a-opam-environment
 #eval $(opam env)
@@ -64,7 +68,6 @@ opam install utop
 
 # install docker, https://stackoverflow.com/questions/40523307/brew-install-docker-does-not-include-docker-engine
 # brew install --cask docker
-
 
 # - test pycoq
 pytest --pyargs pycoq
