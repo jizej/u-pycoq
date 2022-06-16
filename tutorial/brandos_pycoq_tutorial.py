@@ -38,12 +38,6 @@ def create_config(create_clean_version_of_log_file: bool = True):
         "log_filename": os.path.join(os.getenv('OPAM_SWITCH_PREFIX'), 'pycoq.log')
     })
     # create a clean version of the log file
-    if create_clean_version_of_log_file:
-        os.remove(pycoq.config.get_var('log_filename'))
-        Path(pycoq.config.get_var('log_filename')).touch()
-        # with open(pycoq.config.get_var('log_filename'), 'w'):
-        #     pass
-        pycoq.log.info('-- start --')
     print(f'--> {pycoq.config.PYCOQ_CONFIG_FILE=}')
     with open(pycoq.config.PYCOQ_CONFIG_FILE, 'w+') as f:
         json.dump(pycoq_config, f, indent=4, sort_keys=True)
@@ -142,6 +136,7 @@ if __name__ == '__main__':
     start_time = time.time()
     main_coq_file()
     duration = time.time() - start_time
-    print(f"Duration {duration} seconds")
+    print(f"Duration {duration} seconds.\n")
 
     cat_file(pycoq.config.get_var('log_filename'))
+    os.remove(pycoq.config.get_var('log_filename'))
