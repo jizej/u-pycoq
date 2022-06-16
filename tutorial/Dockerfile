@@ -35,18 +35,21 @@ ADD https://api.github.com/repos/IBM/pycoq/git/refs/heads/main version.json
 #RUN conda update -n base -c defaults conda
 #RUN conda install conda-build
 
+# - setp up opam
 #RUN conda install -c conda-forge opam
-#RUN opam init
-#opam switch create debug_proj_4.09.1 4.09.1
-#opam switch debug_proj_4.09.1
-#opam repo add coq-released https://coq.inria.fr/opam/released
-## install the right version of coq and pins it to it so that future opam installs don't change the coq version
-#opam pin add coq 8.11.0
-## useful to see what swith you are on now after the previous setup
-#opam switch list
+# https://stackoverflow.com/questions/72649679/how-to-use-apt-get-install-in-docker-when-there-is-a-could-not-open-lock-file-v
+# USER root
+# RUN apt-get update && apt-get install -y --no-install-recommends bubblewrap
+# RUN opam init
+RUN opam init --disable-sandboxing
+RUN opam switch create debug_proj_4.09.1 4.09.1
+RUN opam switch debug_proj_4.09.1
+RUN eval $(opam env)
+RUN opam repo add coq-released https://coq.inria.fr/opam/released
+RUN opam pin add coq 8.11.0
 
 # - install coq-serapi
-#RUN opam install coq-serapi
+RUN opam install coq-serapi
 
 # Don't think it should work since dockerfiles are not suppose to be editable. Need to run this every time you log?
 # makes sure depedencies are installed once already in the docker image
@@ -56,6 +59,8 @@ RUN echo "pip install -e /home/bot/pycoq" >> ~/.bashrc
 # RUN echo "LIGHT_GREY='\e[0;37m'" >> ~/.bashrc
 # RUN echo "LIGHT_BLUE='\e[1;34m'" >> ~/.bashrc
 # RUN echo "export PS1='\[$LIGHT_BLUE\][\u@\h \W]\$\[$LIGHT_GREY\] '" >> ~/.bashrc
+# RUN echo "eval $(opam env)" >> ~/.bashrc
+# - set env variable for bash terminal prompt p1 to be nicely colored
 ENV force_color_prompt=yes
 
 # RUN pytest --pyargs pycoq

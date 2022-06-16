@@ -1,5 +1,28 @@
 """ test script agent in pycoq
 """
+from pathlib import Path
+
+
+# todo: fix hack? does pycoq really need this?
+def create_default_pycoq_log(pycoq_log_path: str = '~/.local/share/pycoq/'):
+    """
+    Create the default place where we save things to.
+    """
+    log_root: Path = Path(pycoq_log_path).expanduser()
+    # args.current_time = datetime.now().strftime('%b%d_%H-%M-%S')
+    # args.log_root = args.log_root / f'logs_{args.current_time}_jobid_{args.jobid}'
+
+    log_root.mkdir(parents=True, exist_ok=True)
+
+
+create_default_pycoq_log()
+
+import time
+
+import concurrent
+
+import sys
+
 import asyncio
 import os
 
@@ -8,58 +31,88 @@ from typing import Iterable
 import pycoq.opam
 import pycoq.common
 import pycoq.agent
+from pycoq.test.test_serapi import with_prefix, _query_goals
+
+from pdb import set_trace as st
 
 
-async def tutorial_deterministic_agent(theorems: Iterable):
-    """
-    a snipped of code demonstrating usage of pycoq
-    """
+def get_filenames(coq_package: str,
+                  coq_package_pin: str,
+                  coq_serapi: str,
+                  coq_serapi_pin: str,
+                  compiler: str
+                  ) -> list[str]:
+    switch = pycoq.opam_switch_name(compiler, coq_serapi, coq_serapi_pin)
 
-    # create default coq context for evaluation of a theorem
-    pwd: str = os.getcwd()
-    print(f'{pwd=}')
-    coq_ctxt: pycoq.CoqContext = pycoq.common.CoqContext(pwd=pwd,
-                                                         executable='',
-                                                         target='serapi_shell')
-    cfg = pycoq.opam.opam_serapi_cfg(coq_ctxt)
+    pycoq.opam_pin_package(coq_package, coq_package_pin, coq_serapi, coq_serapi_pin, compiler)
 
-    # create python coq-serapi object that wraps API of the coq-serapi
-    async with pycoq.serapi.CoqSerapi(cfg) as coq:
-        for prop, script in theorems:
+    executable = pycoq.opam_executable('coqc', switch)
+    if executable is None:
+        pycoq.log.critical("coqc executable is not found in {switch}")
+        return []
 
-            # execute proposition of the theorem
-            _, _, coq_exc, _ = await coq.execute(prop)
-            if coq_exc:
-                print(f"{prop} raised coq exception {coq_exc}")
-                continue
+    regex = pycoq.pycoq_trace_config.REGEX
 
-            # execute the proof script of the theorem
-            n_steps, n_goals = await pycoq.agent.script_agent(coq, script)
+    workdir = None
 
-            msg = f"Proof {script} fail" if n_goals != 0 else f"Proof {script} success"
-            print(f"{prop} ### {msg} in {n_steps} steps\n")
+    command = (['opam', 'reinstall']
+               + pycoq.root_option()
+               + ['--yes']
+               + ['--switch', switch]
+               + ['--keep-build-dir']
+               + [coq_package])
+
+    pycoq.log.info(f"{executable}, {regex}, {workdir}, {command}")
+
+    strace_logdir = pycoq.config.strace_logdir()
+    return pycoq.trace.strace_build(executable, regex, workdir, command, strace_logdir)
 
 
-def main():
-    theorems = [
-        ("Theorem th4: forall A B C D: Prop, A->(A->B)->(B->C)->(C->D)->D.",
-         ["auto."]),
-        ("Theorem th5: forall A B C D E: Prop, A->(A->B)->(B->C)->(C->D)->E.",
-         ["auto."]),
-        ("Theorem th6: forall A B C D E: Prop, A->(A->B)->(B->C)->(C->D)->(D->E)->E.",
-         ["auto."])]
+def go_through_proofs_in_file_and_print_proof_info(coq_package: str, coq_package_pin=None, write=False):
+    print(f'ENTERED {go_through_proofs_in_file_and_print_proof_info}...')
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        print(f'create executor obj: {executor=}')
+        # for coq_filename in coq_project.filenames():
+        for filename in pycoq.opam.opam_strace_build(coq_package, coq_package_pin):
+            print(f'{filename=}')
+            ctxt = pycoq.common.load_context(filename)
+            print(f'{ctxt=}')
+            # Schedules fn, to be executed as fn(*args, **kwargs) and returns a Future object representing the execution of the callable.
+            steps = executor.submit(_query_goals, ctxt)
+            print(f'{steps=}')
+            # steps = asyncio.run(pycoq.opam.opam_coq_serapi_query_goals(ctxt))
+            st()
 
-    asyncio.run(tutorial_deterministic_agent(theorems))
 
 def main_coq_file():
     """
     My debug example executing the commands in a script.
     :return:
     """
-    from pycoq.test.test_serapi import aux_lf_query_goals
-    aux_lf_query_goals()
+    print(f'Starting main: {main_coq_file}')
+    # from pycoq.test.test_serapi import aux_lf_query_goals
+    # aux_lf_query_goals()
+    # sys.setrecursionlimit(10000)
+    # print("recursion limit", sys.getrecursionlimit())
+    # aux_query_goals("lf", f"file://{with_prefix('lf')}", write=write)
+
+    sys.setrecursionlimit(10000)
+    print("recursion limit", sys.getrecursionlimit())
+
+    # write: bool = False
+    # coq_package = 'lf'
+    # coq_package_pin = f"file://{with_prefix('lf')}"
+    write: bool = False
+    coq_package = 'debug_proj'
+    coq_package_pin = str(Path('~/pycoq/debug_proj/').expanduser())
+
+    # print(f'{coq_package=}')
+    # print(f'{coq_package_pin=}')
+    go_through_proofs_in_file_and_print_proof_info(coq_package, coq_package_pin, write)
 
 
 if __name__ == '__main__':
-    # main()
+    start_time = time.time()
     main_coq_file()
+    duration = time.time() - start_time
+    print(f"Duration {duration} seconds")
