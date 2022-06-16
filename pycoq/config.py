@@ -7,25 +7,29 @@ functions to work with config file
 # see https://tech.preferred.jp/en/blog/working-with-configuration-in-python/
 
 
-
-
 from typing import Dict
 from collections import defaultdict
 import json
 import os
 
+from pdb import set_trace as st
 
-DEFAULT_CONFIG = defaultdict(None,
-{
-    "opam_root" : os.path.join(os.getenv('HOME'),
-                               '.local/share/pycoq/.opam'),
-    "log_level" : 4,
-    "log_filename" : os.path.join(os.getenv('HOME'),
-                                  '.local/share/pycoq/pycoq.log')
-}
-)
+DEFAULT_CONFIG_0 = defaultdict(None, {
+    "opam_root": os.path.join(os.getenv('HOME'),
+                              '.local/share/pycoq/.opam'),
+    "log_level": 4,
+    "log_filename": os.path.join(os.getenv('HOME'),
+                                 '.local/share/pycoq/pycoq.log')
+})
+
+DEFAULT_CONFIG = defaultdict(None, {
+    "opam_root": os.getenv('OPAM_SWITCH_PREFIX'),
+    "log_level": 4,
+    "log_filename": os.path.join(os.getenv('OPAM_SWITCH_PREFIX'), 'pycoq.log')
+})
 
 PYCOQ_CONFIG_FILE = os.path.join(os.getenv('HOME'), '.pycoq')
+
 
 def load_config() -> Dict:
     cfg = DEFAULT_CONFIG.copy()
@@ -34,7 +38,8 @@ def load_config() -> Dict:
             try:
                 cfg_from_file = json.load(config_file)
             except json.JSONDecodeError:
-                print(f"The pycoq config file at {config_file} couldn't be parsed. Remove this config or generate approriate config")
+                print(
+                    f"The pycoq config file at {config_file} couldn't be parsed. Remove this config or generate approriate config")
             cfg.update(cfg_from_file)
     return cfg
 
@@ -52,14 +57,17 @@ def set_var(var: str, value):
     cfg[var] = value
     save_config(cfg)
 
+
 def get_var(var: str):
     '''gets config var or default'''
     cfg = load_config()
     return cfg.get(var)
 
+
 def set_opam_root(s: str):
     ''' sets opam root '''
     set_var("opam_root", s)
+
 
 def opam_root() -> str:
     ''' loads opam root from config '''
@@ -67,6 +75,7 @@ def opam_root() -> str:
     if not os.path.isdir(root):
         os.makedirs(root, exist_ok=True)
     return os.path.expandvars(os.path.expanduser(root))
+
 
 def set_log_level(level: int):
     ''' sets log level
@@ -78,15 +87,19 @@ def set_log_level(level: int):
     '''
     set_var("log_level", level)
 
+
 def log_level():
     return get_var("log_level")
+
 
 def set_log_filename(s: str):
     set_var("log_filename", s)
 
+
 def log_filename():
     return os.path.expandvars(os.path.expanduser(
         get_var("log_filename")))
+
 
 def strace_logdir():
     return get_var("strace_logdir")

@@ -63,7 +63,7 @@ RUN echo "pip install -e /home/bot/pycoq" >> ~/.bashrc
 # RUN echo "LIGHT_GREY='\e[0;37m'" >> ~/.bashrc
 # RUN echo "LIGHT_BLUE='\e[1;34m'" >> ~/.bashrc
 # RUN echo "export PS1='\[$LIGHT_BLUE\][\u@\h \W]\$\[$LIGHT_GREY\] '" >> ~/.bashrc
-# RUN echo "eval $(opam env)" >> ~/.bashrc
+RUN echo "eval $(opam env)" >> ~/.bashrc
 # - set env variable for bash terminal prompt p1 to be nicely colored
 ENV force_color_prompt=yes
 

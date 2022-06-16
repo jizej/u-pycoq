@@ -16,6 +16,7 @@ def logging_level(a: int):
             5: logging.DEBUG}[a]
 
 def config_logging():
+    print(pycoq.config.log_filename(),)
     logging.basicConfig(
         filename=pycoq.config.log_filename(),
         filemode='a',

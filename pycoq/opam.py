@@ -2,13 +2,12 @@
 functions to work with opam
 '''
 
-from typing import Optional, List,  Tuple
+from typing import Optional, List, Tuple
 
 import subprocess
 import os
 import asyncio
 
-import pycoq.config
 import pycoq.pycoq_trace_config
 import pycoq.trace
 import pycoq.log
@@ -16,9 +15,7 @@ import pycoq.split
 import pycoq.serapi
 import pycoq.query_goals
 
-
 import serlib.parser
-
 
 # refactor globals below to be loaded from a default config
 # see e.g. https://tech.preferred.jp/en/blog/working-with-configuration-in-python/
@@ -29,16 +26,15 @@ COQ_REPO = "coq-released"
 COQ_REPO_SOURCE = "https://coq.inria.fr/opam/released"
 SWITCH_INSTALLED_ERROR = "[ERROR] There already is an installed switch named"
 COQ_SERAPI = "coq-serapi"
-#COQ_SERAPI_PIN = "8.13.0+0.13.0"
+# COQ_SERAPI_PIN = "8.13.0+0.13.0"
 COQ_SERAPI_PIN = "8.11.0+0.11.1"
 COQ_EXTRA_WARNING = ['-w', '-projection-no-head-constant',
-             '-w', '-redundant-canonical-projection',
-             '-w', '-notation-overridden',
-             '-w', '-duplicate-clear',
-             '-w', '-ambiguous-paths',
-             '-w', '-undeclared-scope',
-             '-w', '-non-reversible-notation']
-
+                     '-w', '-redundant-canonical-projection',
+                     '-w', '-notation-overridden',
+                     '-w', '-duplicate-clear',
+                     '-w', '-ambiguous-paths',
+                     '-w', '-undeclared-scope',
+                     '-w', '-non-reversible-notation']
 
 
 def opam_version() -> Optional[str]:
@@ -56,6 +52,7 @@ def opam_version() -> Optional[str]:
         pycoq.log.critical(f"{command} returned {error.returncode} {error.stdout.decode()} {error.stderr.decode()}")
         return None
 
+
 def opam_check() -> bool:
     ''' checks if opam version is at least MIN_OPAM_VERSION '''
     version = opam_version()
@@ -65,10 +62,12 @@ def opam_check() -> bool:
     # pkg_resources.parse_version(version) >= pkg_resources.parse_version(MIN_OPAM_VERSION)
     # but ^^^ breaks for ~rc versions of opam
 
+
 def root_option() -> List[str]:
     ''' constructs root option arg to call opam '''
     root = pycoq.config.opam_root()
     return ['--root', root] if not root is None else []
+
 
 def opam_init_root() -> bool:
     ''' returns True if opam inititalizes root successfully '''
@@ -79,7 +78,7 @@ def opam_init_root() -> bool:
                + ['--disable-sandboxing']
                + root_option()
                + ['--bare', '-n'])
-               
+
     try:
         res = subprocess.run(command, check=True,
                              stdout=subprocess.PIPE,
@@ -95,8 +94,8 @@ def opam_update() -> bool:
     '''
     returns True if opam update is successfull
     '''
-    command = ( ['opam', 'update']  + root_option()
-                + ['--all'] )
+    command = (['opam', 'update'] + root_option()
+               + ['--all'])
 
     try:
         res = subprocess.run(command, check=True,
@@ -108,6 +107,7 @@ def opam_update() -> bool:
     except subprocess.CalledProcessError as error:
         pycoq.log.critical(f"{command} returned {error.returncode}: {error.stdout.decode()} {error.stderr.decode()}")
         return False
+
 
 def opam_add_repo_coq() -> bool:
     ''' returns True if opam successfully adds coq repo '''
@@ -136,7 +136,7 @@ def opam_set_base(switch: str, compiler) -> bool:
     '''
     command = (['opam', 'switch'] + root_option()
                + ['--switch', switch]
-               + ['-y'] 
+               + ['-y']
                + ['set-base', compiler])
     try:
         res = subprocess.run(command, check=True,
@@ -165,6 +165,7 @@ def opam_install_package(switch: str, package: str) -> bool:
         pycoq.log.critical(f"{command} returned {error.returncode}: {error.stdout.decode()} {error.stderr.decode()}")
         return False
 
+
 def opam_create_switch(switch: str, compiler: str) -> bool:
     ''' returns True if opam can create or recreate
     switch successfully '''
@@ -184,13 +185,12 @@ def opam_create_switch(switch: str, compiler: str) -> bool:
         return True
     except subprocess.CalledProcessError as error:
         if (error.returncode == 2 and
-            error.stderr.decode().strip().startswith(SWITCH_INSTALLED_ERROR)):
+                error.stderr.decode().strip().startswith(SWITCH_INSTALLED_ERROR)):
             pycoq.log.warning(f"opam: the switch {switch} already exists")
 
             return opam_install_package(switch, compiler)
         pycoq.log.critical(f"{command} returned {error.returncode}: {error.stdout.decode()} {error.stderr.decode()}")
         return False
-    
 
 
 def opam_pin_package(coq_package: str,
@@ -222,8 +222,9 @@ def opam_pin_package(coq_package: str,
 def opam_switch_name(compiler: str, coq_serapi: str,
                      coq_serapi_pin: str) -> str:
     ''' constructs switch name from compiler, coq_serapi and coq_serapi_pin '''
-    
+
     return compiler + '_' + coq_serapi + '.' + coq_serapi_pin
+
 
 def opam_install_serapi(coq_serapi=COQ_SERAPI,
                         coq_serapi_pin=COQ_SERAPI_PIN,
@@ -239,8 +240,6 @@ def opam_install_serapi(coq_serapi=COQ_SERAPI,
                             compiler):
         return False
     return opam_install_package(switch, coq_serapi)
-                            
-
 
 
 def opam_install_coq_package(coq_package: str,
@@ -259,11 +258,10 @@ def opam_install_coq_package(coq_package: str,
         return False
 
     if ((not coq_package_pin is None) and
-        not opam_pin_package(coq_package, coq_package_pin, coq_serapi, coq_serapi_pin, compiler)):
+            not opam_pin_package(coq_package, coq_package_pin, coq_serapi, coq_serapi_pin, compiler)):
         return False
 
     return opam_install_package(switch, coq_package)
-
 
 
 def opam_default_root() -> Optional[str]:
@@ -276,8 +274,8 @@ def opam_default_root() -> Optional[str]:
     command = (['opam', 'config', 'var', 'root'])
     try:
         res = subprocess.run(command, check=True,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
         log(res.stdout.decode(), res.stderr.decode())
         root = res.stdout.decode().strip()
         if os.path.isdir(root):
@@ -289,7 +287,7 @@ def opam_default_root() -> Optional[str]:
         pycoq.log.critical(f"{command} returned {error.returncode}: {error.stdout.decode()} {error.stderr.decode()}")
         return None
 
-    
+
 def opam_executable(name: str, switch: str) -> Optional[str]:
     ''' returns coqc name in a given opam root and switch '''
     if not opam_check():
@@ -306,7 +304,7 @@ def opam_executable(name: str, switch: str) -> Optional[str]:
         ans = res.stdout.decode().strip()
         if not os.path.isfile(ans):
             pycoq.log.error(f"{name} obtained executing {command} "
-                f"and resolved to {ans} was not found ")
+                            f"and resolved to {ans} was not found ")
             return None
 
         return ans
@@ -317,7 +315,7 @@ def opam_executable(name: str, switch: str) -> Optional[str]:
 
 
 def opam_strace_build(coq_package: str,
-                      coq_package_pin = None,
+                      coq_package_pin=None,
                       coq_serapi=COQ_SERAPI,
                       coq_serapi_pin=COQ_SERAPI_PIN,
                       compiler=DEFAULT_OCAML) -> List[str]:
@@ -337,7 +335,7 @@ def opam_strace_build(coq_package: str,
         return False
 
     if ((not coq_package_pin is None) and
-        not opam_pin_package(coq_package, coq_package_pin, coq_serapi, coq_serapi_pin, compiler)):
+            not opam_pin_package(coq_package, coq_package_pin, coq_serapi, coq_serapi_pin, compiler)):
         return False
 
     executable = opam_executable('coqc', switch)
@@ -349,12 +347,12 @@ def opam_strace_build(coq_package: str,
 
     workdir = None
 
-    command = ( ['opam', 'reinstall']
-                + root_option()
-                + ['--yes']
-                + ['--switch', switch]
-                + ['--keep-build-dir']
-                + [coq_package] )
+    command = (['opam', 'reinstall']
+               + root_option()
+               + ['--yes']
+               + ['--switch', switch]
+               + ['--keep-build-dir']
+               + [coq_package])
 
     pycoq.log.info(f"{executable}, {regex}, {workdir}, {command}")
 
@@ -364,9 +362,9 @@ def opam_strace_build(coq_package: str,
 
 def opam_strace_command(command: List[str],
                         workdir: str,
-                      coq_serapi=COQ_SERAPI,
-                      coq_serapi_pin=COQ_SERAPI_PIN,
-                      compiler=DEFAULT_OCAML) -> List[str]:
+                        coq_serapi=COQ_SERAPI,
+                        coq_serapi_pin=COQ_SERAPI_PIN,
+                        compiler=DEFAULT_OCAML) -> List[str]:
     ''' strace command
     '''
 
@@ -392,10 +390,9 @@ def opam_strace_command(command: List[str],
 
 
 def opam_coqtop(coq_ctxt: pycoq.common.CoqContext,
-              coq_serapi=COQ_SERAPI,
-              coq_serapi_pin=COQ_SERAPI_PIN,
-              compiler=DEFAULT_OCAML) -> int:
-
+                coq_serapi=COQ_SERAPI,
+                coq_serapi_pin=COQ_SERAPI_PIN,
+                compiler=DEFAULT_OCAML) -> int:
     '''
     runs coqtop with a given pycoq_context
     returns error code of coqtop with Coqtop Exit on Error flag
@@ -425,10 +422,11 @@ def opam_coqtop(coq_ctxt: pycoq.common.CoqContext,
         pycoq.log.error(f"{command} returned {error.returncode}: {error.stdout.decode()} {error.stderr.decode()}")
         return error.returncode
 
+
 async def opam_coqtop_stmts(coq_ctxt: pycoq.common.CoqContext,
-                       coq_serapi=COQ_SERAPI,
-                       coq_serapi_pin=COQ_SERAPI_PIN,
-                       compiler=DEFAULT_OCAML) -> List[str]:
+                            coq_serapi=COQ_SERAPI,
+                            coq_serapi_pin=COQ_SERAPI_PIN,
+                            compiler=DEFAULT_OCAML) -> List[str]:
     '''
     feeds coqtop repls with a stream
     of coq staments derived from coq_context_fname
@@ -440,23 +438,23 @@ async def opam_coqtop_stmts(coq_ctxt: pycoq.common.CoqContext,
     iqr_args = pycoq.common.coqc_args(coq_ctxt.IQR())
     switch = opam_switch_name(compiler, coq_serapi, coq_serapi_pin)
     command = (['opam', 'exec']
-              + root_option()
-              + ['--switch', switch]
-              + ['--', 'coqtop']
-              + ['-q']
-              + iqr_args
-              + ['-set', 'Coqtop Exit On Error']
-              + ['-topfile', coq_ctxt.target])
+               + root_option()
+               + ['--switch', switch]
+               + ['--', 'coqtop']
+               + ['-q']
+               + iqr_args
+               + ['-set', 'Coqtop Exit On Error']
+               + ['-topfile', coq_ctxt.target])
 
     pycoq.log.info(f"interactive {' '.join(command)}")
 
     ans = []
     proc = await asyncio.create_subprocess_exec(
-            *command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            stdin=asyncio.subprocess.PIPE,
-            cwd=coq_ctxt.pwd)
+        *command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        stdin=asyncio.subprocess.PIPE,
+        cwd=coq_ctxt.pwd)
     print(f"proc {proc} is created")
 
     for stmt in pycoq.split.coq_stmts_of_context(coq_ctxt):
@@ -465,7 +463,6 @@ async def opam_coqtop_stmts(coq_ctxt: pycoq.common.CoqContext,
         print("waiting for drain")
         await proc.stdin.drain()
     proc.stdin.write_eof()
-
 
     while True:
         line = (await proc.stdout.readline()).decode()
@@ -476,11 +473,11 @@ async def opam_coqtop_stmts(coq_ctxt: pycoq.common.CoqContext,
 
     err = (await proc.stderr.read()).decode()
     print(f"error {err}")
-    
+
     return ans, err, proc.returncode
 
 
-def opam_serapi_cfg(coq_ctxt: pycoq.common.CoqContext=None,
+def opam_serapi_cfg(coq_ctxt: pycoq.common.CoqContext = None,
                     coq_serapi=COQ_SERAPI,
                     coq_serapi_pin=COQ_SERAPI_PIN,
                     compiler=DEFAULT_OCAML,
@@ -496,17 +493,16 @@ def opam_serapi_cfg(coq_ctxt: pycoq.common.CoqContext=None,
     debug_option = ['--debug'] if debug else []
 
     command = (['opam', 'exec']
-              + root_option()
-              + ['--switch', switch]
-              + ['--', 'sertop']
-              + iqr_args
-              + ['--topfile', coq_ctxt.target]
-              + debug_option)
+               + root_option()
+               + ['--switch', switch]
+               + ['--', 'sertop']
+               + iqr_args
+               + ['--topfile', coq_ctxt.target]
+               + debug_option)
 
     return pycoq.common.LocalKernelConfig(command=command,
-                                         env=None,
-                                         pwd=coq_ctxt.pwd)
-
+                                          env=None,
+                                          pwd=coq_ctxt.pwd)
 
 
 def log_query_goals_error(_serapi_goals, serapi_goals, serapi_goals_legacy):
@@ -516,7 +512,7 @@ def log_query_goals_error(_serapi_goals, serapi_goals, serapi_goals_legacy):
                    f"serapi_goals: {serapi_goals}\n"
                    f"serapi_goals_legacy: {serapi_goals_legacy}\n"
                    f"input source dumped into {dumpname}\n")
-    open(dumpname,'w').write(_serapi_goals)
+    open(dumpname, 'w').write(_serapi_goals)
     raise ValueError("ERROR serapi_goals discrepancy")
 
 
@@ -538,7 +534,7 @@ async def opam_coq_serapi_query_goals(coq_ctxt: pycoq.common.CoqContext,
     res = []
 
     # par = serlib.parser.SExpParser()
-    
+
     async with pycoq.serapi.CoqSerapi(cfg, logfname=logfname) as coq:
         for stmt in pycoq.split.coq_stmts_of_context(coq_ctxt):
             _, _, coq_exc, _ = await coq.execute(stmt)
@@ -546,11 +542,25 @@ async def opam_coq_serapi_query_goals(coq_ctxt: pycoq.common.CoqContext,
                 break
 
             _serapi_goals = await coq.query_goals_completed()
-            
+
             post_fix = coq.parser.postfix_of_sexp(_serapi_goals)
             ann = serlib.cparser.annotate(post_fix)
 
             serapi_goals = pycoq.query_goals.parse_serapi_goals(coq.parser, post_fix, ann, pycoq.query_goals.SExpr)
-            
+
             res.append((stmt, _serapi_goals, serapi_goals))
     return res
+
+
+def eval_opam_env():
+    command = 'eval $(opam env)'
+    pycoq.log.info(f"Running {command}.")
+    try:
+        res = subprocess.run(command, shell=True,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        pycoq.log.info(f"{command}: {res.stdout.decode()} {res.stderr.decode()}")
+        return 0
+    except subprocess.CalledProcessError as error:
+        pycoq.log.error(f"{command} returned {error.returncode}: {error.stdout.decode()} {error.stderr.decode()}")
+        return error.returncode

@@ -1,6 +1,8 @@
 """
 
 """
+import subprocess
+
 from pprint import pprint
 
 import shutil
@@ -30,18 +32,6 @@ import pycoq.agent
 from pycoq.test.test_serapi import with_prefix, _query_goals
 
 from pdb import set_trace as st
-
-def create_config(create_clean_version_of_log_file: bool = True):
-    pycoq_config = defaultdict(None, {
-        "opam_root": os.getenv('OPAM_SWITCH_PREFIX'),
-        "log_level": 4,
-        "log_filename": os.path.join(os.getenv('OPAM_SWITCH_PREFIX'), 'pycoq.log')
-    })
-    # create a clean version of the log file
-    print(f'--> {pycoq.config.PYCOQ_CONFIG_FILE=}')
-    with open(pycoq.config.PYCOQ_CONFIG_FILE, 'w+') as f:
-        json.dump(pycoq_config, f, indent=4, sort_keys=True)
-    pprint(pycoq_config)
 
 
 def get_switch_name() -> str:
@@ -113,23 +103,22 @@ def main_coq_file():
     My debug example executing the commands in a script.
     :return:
     """
-    create_config()
-    pycoq.log.info('created my config')
-
     print(f'Starting main: {main_coq_file}')
-    sys.setrecursionlimit(10000)
-    print("recursion limit", sys.getrecursionlimit())
+    pycoq.log.info(f'Starting main: {main_coq_file}')
 
+    # sys.setrecursionlimit(10000)
+    # print("recursion limit", sys.getrecursionlimit())
+    #
+    # # write: bool = False
+    # # coq_package = 'lf'
+    # # coq_package_pin = f"file://{with_prefix('lf')}"
     # write: bool = False
-    # coq_package = 'lf'
-    # coq_package_pin = f"file://{with_prefix('lf')}"
-    write: bool = False
-    coq_package = 'debug_proj'
-    coq_package_pin = str(Path('~/pycoq/debug_proj/').expanduser())
-
-    print(f'{coq_package=}')
-    print(f'{coq_package_pin=}')
-    go_through_proofs_in_file_and_print_proof_info(coq_package, coq_package_pin, write)
+    # coq_package = 'debug_proj'
+    # coq_package_pin = str(Path('~/pycoq/debug_proj/').expanduser())
+    #
+    # print(f'{coq_package=}')
+    # print(f'{coq_package_pin=}')
+    # go_through_proofs_in_file_and_print_proof_info(coq_package, coq_package_pin, write)
 
 
 if __name__ == '__main__':
@@ -139,4 +128,4 @@ if __name__ == '__main__':
     print(f"Duration {duration} seconds.\n")
 
     cat_file(pycoq.config.get_var('log_filename'))
-    os.remove(pycoq.config.get_var('log_filename'))
+    # os.remove(pycoq.config.get_var('log_filename'))
