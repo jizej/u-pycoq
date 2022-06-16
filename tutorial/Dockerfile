@@ -37,19 +37,23 @@ ADD https://api.github.com/repos/IBM/pycoq/git/refs/heads/main version.json
 
 # - setp up opam
 #RUN conda install -c conda-forge opam
-# https://stackoverflow.com/questions/72649679/how-to-use-apt-get-install-in-docker-when-there-is-a-could-not-open-lock-file-v
-# USER root
-# RUN apt-get update && apt-get install -y --no-install-recommends bubblewrap
-# RUN opam init
+#RUN opam init --disable-sandboxing
+#RUN opam switch create debug_proj_4.09.1 4.09.1
+#RUN opam switch debug_proj_4.09.1
+## RUN eval $(opam env)
+#RUN opam repo add coq-released https://coq.inria.fr/opam/released
+#RUN opam pin add -y coq 8.11.0
+#RUN opam install -y coq-serapi
+#RUN eval $(opam env)
+
 RUN opam init --disable-sandboxing
 RUN opam switch create debug_proj_4.09.1 4.09.1
 RUN opam switch debug_proj_4.09.1
-RUN eval $(opam env)
+# RUN eval $(opam env)
 RUN opam repo add coq-released https://coq.inria.fr/opam/released
-RUN opam pin add coq 8.11.0
-
-# - install coq-serapi
-RUN opam install coq-serapi
+RUN opam pin add -y coq 8.11.0
+RUN opam install -y coq-serapi
+RUN eval $(opam env)
 
 # Don't think it should work since dockerfiles are not suppose to be editable. Need to run this every time you log?
 # makes sure depedencies are installed once already in the docker image
