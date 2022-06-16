@@ -52,6 +52,10 @@ ADD https://api.github.com/repos/IBM/pycoq/git/refs/heads/main version.json
 # makes sure depedencies are installed once already in the docker image
 RUN pip install pycoq
 # then make sure editable mode is done to be able to use changing pycoq from system
-RUN echo "pip install -e /home/bot/pycoq" > ~/.bashrc
+RUN echo "pip install -e /home/bot/pycoq" >> ~/.bashrc
+# RUN echo "LIGHT_GREY='\e[0;37m'" >> ~/.bashrc
+# RUN echo "LIGHT_BLUE='\e[1;34m'" >> ~/.bashrc
+# RUN echo "export PS1='\[$LIGHT_BLUE\][\u@\h \W]\$\[$LIGHT_GREY\] '" >> ~/.bashrc
+ENV force_color_prompt=yes
 
 # RUN pytest --pyargs pycoq
