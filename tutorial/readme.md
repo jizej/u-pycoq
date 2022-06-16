@@ -1,4 +1,15 @@
-# 
+# Running pycoq for development in an interactive docker container
+
+## Quick: pull the image from Brando's docker hub
+
+For a dev using a pre-built image do:
+```bash
+docker pull brandojazz/pycoq:test_brando
+```
+
+Now you can do the `docker run -v ...` command mentioned bellow.
+
+## Building image from scratch
 
 To build the docker image that is interactable from the Dockerfile using the tag flag '-t' do:
 ```bash
