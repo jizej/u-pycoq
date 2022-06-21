@@ -83,7 +83,7 @@ def aux_serlib_parse_bytestring_new(s, address):
     sparser = serlib.parser.SExpParser()
     res0a = sparser.postfix_of_bytestring(s, address)
     res0b = sparser.parse_bytestring_new(s, address)
-    pycoq.log.info(f"test {res0a} == {res0b}")
+    logging.info(f"test {res0a} == {res0b}")
     assert all(res0a == res0b)
 
 
@@ -130,7 +130,7 @@ def test_serlib_children():
     ann = serlib.cparser.annotate(res)
     root = res.shape[0] - 1
     children = serlib.cparser.children(res, ann, root)
-    pycoq.log.info(f"root node {root} has children {children}")
+    logging.info(f"root node {root} has children {children}")
     assert all(children == [5,12,15,18])
 
 

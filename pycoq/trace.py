@@ -18,7 +18,8 @@ from strace_parser.parser import get_parser
 
 from pycoq.common import CoqContext, context_fname, dump_context
 
-import pycoq.log
+# import pycoq.log
+import logging
 
 
 
@@ -135,7 +136,7 @@ def record_context(line: str, parser, regex: str, source=''):
                                      env=p_context.env)
             target_fname = os.path.join(pwd, target)
             res.append(dump_context(context_fname(target_fname), coq_context))
-            pycoq.log.info(f"from {source} recorded context to {context_fname(target_fname)}")
+            logging.info(f"from {source} recorded context to {context_fname(target_fname)}")
     return res
 
 
@@ -146,7 +147,7 @@ def parse_strace_logdir(logdir: str, executable: str, regex: str) -> List[str]:
     and save the call information _pycoq_context
     '''
 
-    pycoq.log.info(f"pycoq: parsing strace log "
+    logging.info(f"pycoq: parsing strace log "
                    f"execve({executable}) and recording"
                    f"arguments that match {regex} in cwd {os.getcwd()}")
     parser = get_parser()
@@ -155,7 +156,7 @@ def parse_strace_logdir(logdir: str, executable: str, regex: str) -> List[str]:
         with open(os.path.join(logdir,logfname_pid), 'r') as log_file:
             for line in iter(log_file.readline, ''):
                 if line.find(hex_rep(executable)) != -1:
-                    pycoq.log.info(f"from {logdir} from {log_file} parsing..")
+                    logging.info(f"from {logdir} from {log_file} parsing..")
                     res += record_context(line, parser, regex, log_file)
     return res
 
@@ -172,7 +173,7 @@ def strace_build(executable: str,
     '''
     def _strace_build(executable, regex, workdir, command, logdir):
         logfname = os.path.join(logdir, 'strace.log')
-        pycoq.log.info(f"pycoq: tracing {executable} accesing {regex} while "
+        logging.info(f"pycoq: tracing {executable} accesing {regex} while "
                        f"executing {command} from {workdir} with "
                        f"curdir {os.getcwd()}")
         with subprocess.Popen(['strace', '-e', 'trace=execve',
@@ -184,11 +185,11 @@ def strace_build(executable: str,
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE) as proc:
             for line in iter(proc.stdout.readline,''):
-                pycoq.log.debug(f"strace stdout: {line}")
-            pycoq.log.info(f"strace stderr: {proc.stderr.read()}"
+                logging.debug(f"strace stdout: {line}")
+            logging.info(f"strace stderr: {proc.stderr.read()}"
                            "waiting strace to finish...")
             proc.wait()
-        pycoq.log.info('strace finished')
+        logging.info('strace finished')
         return parse_strace_logdir(logdir, executable, regex)
 
     if strace_logdir is None:

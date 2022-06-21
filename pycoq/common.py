@@ -7,8 +7,8 @@ from dataclasses import dataclass, field
 from typing import List, Dict
 from pycoq.pycoq_trace_config import CONTEXT_EXT
 
-import pycoq.log
-
+# import pycoq.log
+import logging
 
 TIMEOUT_TERMINATE = 5
 
@@ -82,7 +82,7 @@ def dump_context(fname: str, coq_context: CoqContext) -> str:
     returns fname of dumped coq_context
     '''
     with open(fname, 'w') as fout:
-        pycoq.log.info(f'dump_context: recording context to {fname}')
+        logging.info(f'dump_context: recording context to {fname}')
         fout.write(coq_context.to_json())
         return(fname)
     

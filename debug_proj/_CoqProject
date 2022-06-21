@@ -1,5 +1,5 @@
 # flags for coqc, path where folder is and stuff is ran from and name of project/Module
--Q . DebugProj
+-Q . Debug_Proj
 -arg "-w all"
 
 # project files

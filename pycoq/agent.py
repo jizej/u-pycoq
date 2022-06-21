@@ -1,9 +1,11 @@
 import pycoq.serapi
-import pycoq.log
+# import pycoq.log
+import logging
 
 import serlib.parser
 
 from serlib.parser import SExpParser
+
 
 from typing import Iterable, List, Tuple
 
@@ -15,31 +17,31 @@ async def evaluate_agent_on_stream(cfg: pycoq.common.LocalKernelConfig, agent, p
             result = await coq.execute(f"Section {section_name}.")
             last_sids = result[3]
             if (len(last_sids) != 1 or len(result[2]) > 0):
-                pycoq.log.debug(f"evaluate_agent_session: coq execute result is {result}")
+                logging.debug(f"evaluate_agent_session: coq execute result is {result}")
                 raise RuntimeError("evaluate_agent_session: new section was not initialized, aborting..")
                 
             result = await coq.execute(prop)
             
             if len(result[2]) > 0:
-                pycoq.log.debug("evaluate_agent_session: Error in proposition")
-                pycoq.log.debug(result[2])
+                logging.debug("evaluate_agent_session: Error in proposition")
+                logging.debug(result[2])
                 yield (prop, -2)
             else:
                 agent_result = await agent(coq, **agent_parameters)
                 
                 result = await coq.cancel_completed(last_sids)
 
-                pycoq.log.debug("evaluate_agent_session: most recent agent section cancelled; ready to evaluate another proposition")
+                logging.debug("evaluate_agent_session: most recent agent section cancelled; ready to evaluate another proposition")
                 yield (prop, agent_result)    
 
                 
 async def evaluate_agent_in_session(coq: pycoq.serapi.CoqSerapi, agent, prop: str, name: str, agent_parameters = {}):
-    pycoq.log.debug(prop)
+    logging.debug(prop)
     result = await coq.execute(prop)
     last_sids = result[3]
     if len(last_sids) != 1 or len(result[2]) > 0:
-        pycoq.log.debug("evaluate_agent_in_session: Error in proposition")
-        pycoq.log.debug(result[2])
+        logging.debug("evaluate_agent_in_session: Error in proposition")
+        logging.debug(result[2])
         return (-2, None)
     else:
         
@@ -61,7 +63,7 @@ async def evaluate_agent_in_session(coq: pycoq.serapi.CoqSerapi, agent, prop: st
         
         
 
-        pycoq.log.debug("evaluate_agent_session: most recent section cancelled; ready to evaluate another proposition")
+        logging.debug("evaluate_agent_session: most recent section cancelled; ready to evaluate another proposition")
         return (agent_result, definition)
     
     
@@ -90,8 +92,8 @@ async def evaluate_agent(cfg: pycoq.common.LocalKernelConfig, agent, prop: str, 
     async with pycoq.serapi.CoqSerapi(cfg, logfname=logfname) as coq:
         _, _, coq_exc, _ = await coq.execute(prop)
         if len(coq_exc) > 0:
-            pycoq.log.debug("evaluate_agent: Error in proposition")
-            pycoq.log.debug(coq_exc)
+            logging.debug("evaluate_agent: Error in proposition")
+            logging.debug(coq_exc)
             return (-2, None)
         else:
             result, extra = await agent(coq, **agent_parameters)
@@ -146,25 +148,25 @@ async def auto_agent(coq: pycoq.serapi.CoqSerapi, auto_limit: int):
     goals_stack = await get_goals_stack(coq)
         
     while time_space_bounds_ok(cnt, auto_limit):
-        pycoq.log.debug(f"agent: have {-goals_stack[-1]} goals to solve")
+        logging.debug(f"agent: have {-goals_stack[-1]} goals to solve")
             
         # the main code of RL / DFS / MCTS agent will go here 
         # given the goal stack the agent needs to decide what command to execute on coq engine
 
-        pycoq.log.debug("agent: trying default auto tactics")
+        logging.debug("agent: trying default auto tactics")
         result = await coq.execute(f"auto {cnt}.")
-        pycoq.log.debug(f"agent: auto {cnt} tactic is completed with result {result}")
+        logging.debug(f"agent: auto {cnt} tactic is completed with result {result}")
 
         goals_stack = await get_goals_stack(coq)   #prepare the goals stack for the next round 
         if (goals_stack[-1] == 0):
-            pycoq.log.debug(f"agent: Success, all goals are solved with auto {cnt}.")
+            logging.debug(f"agent: Success, all goals are solved with auto {cnt}.")
             _, _, coq_exc, _ = await coq.execute("Qed.")
             if coq_exc:
-                pycoq.log.info(f"evaluation of Qed. in coq-serapi session raised exception {coq_exc}")
+                logging.info(f"evaluation of Qed. in coq-serapi session raised exception {coq_exc}")
             return (cnt, 0)
         cnt += 1
             
-    pycoq.log.debug("agent: Failure, time space bounds exceeded")
+    logging.debug("agent: Failure, time space bounds exceeded")
     return (-1, -goals_stack[-1])
             
 async def script_agent(coq: pycoq.serapi.CoqSerapi, proof_script: List[str]) -> Tuple[int, int]:
@@ -177,22 +179,22 @@ async def script_agent(coq: pycoq.serapi.CoqSerapi, proof_script: List[str]) -> 
         
     n_steps = 0
     serapi_goals = await coq.serapi_goals()
-    pycoq.log.debug(serapi_goals)
+    logging.debug(serapi_goals)
 
     for stmt in proof_script:
         if serapi_goals.empty():
             break
-        pycoq.log.debug(f"executing: {stmt}")
+        logging.debug(f"executing: {stmt}")
         _, _, coq_exc, _ = await coq.execute(stmt)
 
         if coq_exc:
-            pycoq.log.debug(f"evaluation of {stmt} in coq-serapi session raised exception {coq_exc}")
+            logging.debug(f"evaluation of {stmt} in coq-serapi session raised exception {coq_exc}")
             break
 
         n_steps += 1
         
         serapi_goals = await coq.serapi_goals()
-        pycoq.log.debug(serapi_goals)
+        logging.debug(serapi_goals)
         
 
     # finalize
@@ -200,7 +202,7 @@ async def script_agent(coq: pycoq.serapi.CoqSerapi, proof_script: List[str]) -> 
     stmt = "Qed." if serapi_goals.empty() else "Abort."
     _, _, coq_exc, _ = await coq.execute(stmt)
     if coq_exc:
-        pycoq.log.info(f"evaluation of {stmt} in coq-serapi session raised exception {coq_exc}")
+        logging.info(f"evaluation of {stmt} in coq-serapi session raised exception {coq_exc}")
             
     return (n_steps, len(serapi_goals.goals))
 

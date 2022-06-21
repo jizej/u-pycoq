@@ -15,6 +15,7 @@ import sys
 
 import pkg_resources
 
+
 def with_prefix(s: str) -> str:
     ''' adds package path as prefix '''
     return os.path.join(pkg_resources.resource_filename('pycoq', 'test'), s)
@@ -34,15 +35,15 @@ def format_query_goals(steps) -> str:
 
 def check_ans(ans: str, project: str, fname: str, write=False):
     ''' checks results against saved '''
-    dirname = os.path.join(with_prefix(project),os.path.dirname(fname))
+    dirname = os.path.join(with_prefix(project), os.path.dirname(fname))
     print(f"dirname is {dirname}")
     if write:
         os.makedirs(dirname, exist_ok=True)
-        with open(os.path.join(dirname,os.path.basename(fname)), 'w') as stream:
+        with open(os.path.join(dirname, os.path.basename(fname)), 'w') as stream:
             stream.write(ans)
-    with open(os.path.join(dirname,os.path.basename(fname)), 'r') as stream:
+    with open(os.path.join(dirname, os.path.basename(fname)), 'r') as stream:
         assert ans == stream.read()
-        
+
 
 def aux_query_goals_single(coq_package: str, coq_package_pin=None, write=False):
     ''' tests coq package againss cparser + query_goals '''
@@ -56,8 +57,10 @@ def aux_query_goals_single(coq_package: str, coq_package_pin=None, write=False):
         check_ans(ans, coq_package, ctxt.target + '._pytest_signature_query_goals',
                   write=write)
 
+
 def _query_goals(ctxt):
     return asyncio.run(pycoq.opam.opam_coq_serapi_query_goals(ctxt))
+
 
 def aux_query_goals(coq_package: str, coq_package_pin=None, write=False):
     ''' tests coq package againss cparser + query_goals '''
@@ -75,9 +78,10 @@ def aux_query_goals(coq_package: str, coq_package_pin=None, write=False):
             ctxt = futures[fut]
             steps = fut.result()
             logging.info(f"MULTI-PROCESSING FINISHED: {ctxt.target}")
-            ans = format_query_goals(steps) 
+            ans = format_query_goals(steps)
             check_ans(ans, coq_package, ctxt.target + '._pytest_signature_query_goals',
                       write=write)
+
 
 def aux_lf_query_goals(write=False):
     sys.setrecursionlimit(10000)
@@ -86,7 +90,7 @@ def aux_lf_query_goals(write=False):
 
 
 def aux_bignums_query_goals(write=False):
-    aux_query_goals("coq-bignums",  write=write)
+    aux_query_goals("coq-bignums", write=write)
 
 
 def test_serapi_installed():
@@ -97,5 +101,5 @@ def test_serapi_installed():
 def test_lf_query_goals(benchmark):
     benchmark.pedantic(aux_lf_query_goals)
 
-#def test_bignums_query_goals(benchmark):
+# def test_bignums_query_goals(benchmark):
 #    benchmark.pedantic(aux_bignums_query_goals)

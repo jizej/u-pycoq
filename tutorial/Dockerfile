@@ -35,7 +35,7 @@ ADD https://api.github.com/repos/IBM/pycoq/git/refs/heads/main version.json
 #RUN conda update -n base -c defaults conda
 #RUN conda install conda-build
 
-# - setp up opam
+# - setup opam
 #RUN conda install -c conda-forge opam
 #RUN opam init --disable-sandboxing
 #RUN opam switch create debug_proj_4.09.1 4.09.1
@@ -46,24 +46,39 @@ ADD https://api.github.com/repos/IBM/pycoq/git/refs/heads/main version.json
 #RUN opam install -y coq-serapi
 #RUN eval $(opam env)
 
+#RUN opam init --disable-sandboxing
+#RUN opam switch create debug_proj_4.09.1 4.09.1
+#RUN opam switch debug_proj_4.09.1
+## RUN eval $(opam env)
+#RUN opam repo add coq-released https://coq.inria.fr/opam/released
+#RUN opam pin add -y coq 8.11.0
+#RUN opam install -y coq-serapi
+#RUN eval $(opam env)
+
+# -- setup opam like VP's PyCoq
 RUN opam init --disable-sandboxing
-RUN opam switch create debug_proj_4.09.1 4.09.1
-RUN opam switch debug_proj_4.09.1
-# RUN eval $(opam env)
-RUN opam repo add coq-released https://coq.inria.fr/opam/released
-RUN opam pin add -y coq 8.11.0
-RUN opam install -y coq-serapi
+# compiler + '_' + coq_serapi + '.' + coq_serapi_pin
+RUN opam switch create ocaml-variants.4.07.1+flambda_coq-serapi_coq-serapi_8.11.0+0.11.1 ocaml-variants.4.07.1+flambda
+RUN opam switch ocaml-variants.4.07.1+flambda_coq-serapi_coq-serapi_8.11.0+0.11.1
 RUN eval $(opam env)
 
-# Don't think it should work since dockerfiles are not suppose to be editable. Need to run this every time you log?
-# makes sure depedencies are installed once already in the docker image
+RUN opam repo add coq-released https://coq.inria.fr/opam/released
+# RUN opam pin add -y coq 8.11.0
+# ['opam', 'repo', '--all-switches', 'add', '--set-default', 'coq-released', 'https://coq.inria.fr/opam/released']
+RUN opam repo --all-switches add --set-default coq-released https://coq.inria.fr/opam/released
+RUN opam update --all
+RUN opam pin add -y coq 8.11.0
+
+#RUN opam install -y --switch ocaml-variants.4.07.1+flambda_coq-serapi_coq-serapi_8.11.0+0.11.1 coq-serapi 8.11.0+0.11.1
+RUN opam install -y coq-serapi
+
+RUN eval $(opam env)
+
+# makes sure depedencies for pycoq are installed once already in the docker image
 RUN pip install pycoq
 # then make sure editable mode is done to be able to use changing pycoq from system
 RUN echo "pip install -e /home/bot/pycoq" >> ~/.bashrc
-# RUN echo "LIGHT_GREY='\e[0;37m'" >> ~/.bashrc
-# RUN echo "LIGHT_BLUE='\e[1;34m'" >> ~/.bashrc
-# RUN echo "export PS1='\[$LIGHT_BLUE\][\u@\h \W]\$\[$LIGHT_GREY\] '" >> ~/.bashrc
-# RUN echo "eval $(opam env)" >> ~/.bashrc
+RUN echo "eval $(opam env)" >> ~/.bashrc
 # - set env variable for bash terminal prompt p1 to be nicely colored
 ENV force_color_prompt=yes
 

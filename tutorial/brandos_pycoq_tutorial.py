@@ -27,21 +27,12 @@ import pycoq.opam as opam
 import pycoq.config
 import pycoq.common
 import pycoq.agent
-from pycoq.test.test_serapi import with_prefix, _query_goals
+from pycoq.test.test_serapi import with_prefix, _query_goals, format_query_goals
+
+import logging
 
 from pdb import set_trace as st
-
-def create_config(create_clean_version_of_log_file: bool = True):
-    pycoq_config = defaultdict(None, {
-        "opam_root": os.getenv('OPAM_SWITCH_PREFIX'),
-        "log_level": 4,
-        "log_filename": os.path.join(os.getenv('OPAM_SWITCH_PREFIX'), 'pycoq.log')
-    })
-    # create a clean version of the log file
-    print(f'--> {pycoq.config.PYCOQ_CONFIG_FILE=}')
-    with open(pycoq.config.PYCOQ_CONFIG_FILE, 'w+') as f:
-        json.dump(pycoq_config, f, indent=4, sort_keys=True)
-    pprint(pycoq_config)
+from pprint import pprint
 
 
 def get_switch_name() -> str:
@@ -60,83 +51,91 @@ def get_filenames_from_coq_proj(coq_package: str,
     switch: str = get_switch_name()
 
     opam.opam_pin_package_to_switch(coq_package, coq_package_pin, switch)
-    # # opam.opam_list()
-    # pycoq.log.info('here')
-    #
-    # executable = pycoq.opam.opam_executable('coqc', switch)
-    # pycoq.log.info('here2')
-    # if executable is None:
-    #     pycoq.log.critical("coqc executable is not found in {switch}")
-    #     return []
-    #
-    # regex = pycoq.pycoq_trace_config.REGEX
-    #
-    # workdir = None
-    #
-    # command = (['opam', 'reinstall']
-    #            + opam.root_option()
-    #            + ['--yes']
-    #            + ['--switch', switch]
-    #            + ['--keep-build-dir']
-    #            + [coq_package])
-    #
-    # pycoq.log.info(f"{executable}, {regex}, {workdir}, {command}")
-    #
-    # strace_logdir = pycoq.config.strace_logdir()
-    # return pycoq.trace.strace_build(executable, regex, workdir, command, strace_logdir)
+
+    executable = pycoq.opam.opam_executable('coqc', switch)
+    if executable is None:
+        logging.critical("coqc executable is not found in {switch}")
+        return []
+
+    regex = pycoq.pycoq_trace_config.REGEX
+
+    workdir = None
+
+    command = (['opam', 'reinstall']
+               + opam.root_option()
+               + ['--yes']
+               + ['--switch', switch]
+               + ['--keep-build-dir']
+               + [coq_package])
+
+    logging.info(f"{executable}, {regex}, {workdir}, {command}")
+
+    strace_logdir = pycoq.config.get_strace_logdir()
+    return pycoq.trace.strace_build(executable, regex, workdir, command, strace_logdir)
 
 
 def go_through_proofs_in_file_and_print_proof_info(coq_package: str,
                                                    coq_package_pin: str,
                                                    write=False,
                                                    ):
-    print(f'Your coq project is: {coq_package=} {coq_package_pin=}')
-    print(f'ENTERED {go_through_proofs_in_file_and_print_proof_info}...')
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        print(f'create executor obj: {executor=}')
-        # for coq_filename in coq_project.filenames():
-        # for filename in pycoq.opam.opam_strace_build(coq_package, coq_package_pin):
-        filenames = get_filenames_from_coq_proj(coq_package, coq_package_pin)
-        # print(f'{filenames=}')
-        # for filename in get_filenames_from_coq_proj(coq_package, coq_package_pin):
-        #     print(f'{filename=}')
-        #     ctxt = pycoq.common.load_context(filename)
-        #     print(f'{ctxt=}')
-        #     # Schedules fn, to be executed as fn(*args, **kwargs) and returns a Future object representing the execution of the callable.
-        #     steps = executor.submit(_query_goals, ctxt)
-        #     print(f'{steps=}')
-        #     # steps = asyncio.run(pycoq.opam.opam_coq_serapi_query_goals(ctxt))
+    # - for coq_filename in coq_project.filenames():
+    # filenames = get_filenames_from_coq_proj(coq_package, coq_package_pin)  # for filename in pycoq.opam.opam_strace_build(coq_package, coq_package_pin)
+    filenames = pycoq.opam.opam_strace_build(coq_package, coq_package_pin)
+    logging.info(f'\n ALL files: {filenames=}')
+    pprint(filenames)
+    # assert '/home/bot/.opam/debug_proj_4.09.1/.opam-switch/build/lf.dev/TwoGoals.v._pycoq_context' in filenames
+    # filenames = ['/home/bot/.opam/debug_proj_4.09.1/.opam-switch/build/lf.dev/TwoGoals.v._pycoq_context']
+    # for filename in filenames:
+    #     logging.info(f"PROCESSING {filename}")
+    #     ctxt = pycoq.common.load_context(filename)
+    #     logging.info(f'{ctxt=}')
+    #     steps = asyncio.run(pycoq.opam.opam_coq_serapi_query_goals(ctxt))
+    #     pprint(steps)
+    #     logging.info(f'{steps=}')
+        #
+        # ans = format_query_goals(steps)
+        # logging.info(f'{ans=}')
+        # check_ans(ans, coq_package, ctxt.target + '._pytest_signature_query_goals',
+        #           write=write)
+
+        # - for thm in get_thms(coq_filename):
+            # - for i, stmt in enumerate(thm.tt.proof.stmts):
 
 
-def main_coq_file():
+def main():
     """
     My debug example executing the commands in a script.
+
+    opam pin -y --switch debug_proj_4.09.1 debug_proj file:///home/bot/pycoq/debug_proj
     :return:
     """
-    create_config()
-    pycoq.log.info('created my config')
-
-    print(f'Starting main: {main_coq_file}')
+    # print(f'Starting main: {main=}')
     sys.setrecursionlimit(10000)
-    print("recursion limit", sys.getrecursionlimit())
+    # print("recursion limit", sys.getrecursionlimit())
 
-    # write: bool = False
-    # coq_package = 'lf'
-    # coq_package_pin = f"file://{with_prefix('lf')}"
     write: bool = False
-    coq_package = 'debug_proj'
-    coq_package_pin = str(Path('~/pycoq/debug_proj/').expanduser())
+    coq_package = 'lf'
+    coq_package_pin = f"file://{with_prefix('lf')}"
+    # write: bool = False
+    # coq_package = 'debug_proj'
+    # # coq_package_pin = f"file://{os.path.expanduser('~/pycoq/debug_proj')}"
+    # coq_package_pin = f"{os.path.expanduser('~/pycoq/debug_proj')}"
 
-    print(f'{coq_package=}')
-    print(f'{coq_package_pin=}')
+    # print(f'{coq_package=}')
+    # print(f'{coq_package_pin=}')
     go_through_proofs_in_file_and_print_proof_info(coq_package, coq_package_pin, write)
 
 
 if __name__ == '__main__':
+    print()
+    print('------------------------ output of python to terminal --------------------------\n')
     start_time = time.time()
-    main_coq_file()
+    main()
     duration = time.time() - start_time
-    print(f"Duration {duration} seconds.\n")
+    logging.info(f"Duration {duration} seconds.\n\a")
 
-    cat_file(pycoq.config.get_var('log_filename'))
+    # print('------------------------ output of logfile --------------------------\n')
+    # cat_file(pycoq.config.get_var('log_filename'))
+    # print(f'{pycoq.config.get_var("log_filename")=}')
+    # logging.info(f'{pycoq.config.get_var("log_filename")=}')
     os.remove(pycoq.config.get_var('log_filename'))

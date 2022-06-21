@@ -6,7 +6,8 @@ from typing import Union
 from pycoq.common import LocalKernelConfig, RemoteKernelConfig
 from pycoq.common import TIMEOUT_TERMINATE
 
-import pycoq.log
+# import pycoq.log
+import logging
 
 KernelConfig = Union[LocalKernelConfig, RemoteKernelConfig]
 
@@ -69,9 +70,9 @@ class LocalKernel():
         self._reader = self._proc.stdout
         self._reader_err = self._proc.stderr
         self._writer = self._proc.stdin
-        pycoq.log.info(f"process with {self._proc.pid} started as")
-        pycoq.log.info(f"cmd: {cmd}")
-        pycoq.log.info(f"cwd: {cwd}")
+        logging.info(f"process with {self._proc.pid} started as")
+        logging.info(f"cmd: {cmd}")
+        logging.info(f"cwd: {cwd}")
 
 
     async def __aenter__(self):
