@@ -10,6 +10,9 @@ from collections import defaultdict
 
 from pathlib import Path
 
+import serlib
+from pycoq.query_goals import SerapiGoals, srepr
+from pycoq.split import agen_coq_stmts
 from tutorial.utils import cat_file
 
 import time
@@ -31,75 +34,79 @@ from pycoq.test.test_serapi import with_prefix, _query_goals, format_query_goals
 
 import logging
 
+import aiofile
+
 from pdb import set_trace as st
 from pprint import pprint
 
 
-def get_switch_name() -> str:
-    """
-    bot@18f71e53b3f5:~$ opam switch list
-    #   switch             compiler                    description
-    ->  debug_proj_4.09.1  ocaml-base-compiler.4.09.1  debug_proj_4.09.1
-    """
-    # todo: improve with current name, currently hardcoded wrt what is activated in my docker file.
-    return 'debug_proj_4.09.1'
-
-
-def get_filenames_from_coq_proj(coq_package: str,
-                                coq_package_pin: str,
-                                ) -> list[str]:
-    switch: str = get_switch_name()
-
-    opam.opam_pin_package_to_switch(coq_package, coq_package_pin, switch)
-
-    executable = pycoq.opam.opam_executable('coqc', switch)
-    if executable is None:
-        logging.critical("coqc executable is not found in {switch}")
-        return []
-
-    regex = pycoq.pycoq_trace_config.REGEX
-
-    workdir = None
-
-    command = (['opam', 'reinstall']
-               + opam.root_option()
-               + ['--yes']
-               + ['--switch', switch]
-               + ['--keep-build-dir']
-               + [coq_package])
-
-    logging.info(f"{executable}, {regex}, {workdir}, {command}")
-
-    strace_logdir = pycoq.config.get_strace_logdir()
-    return pycoq.trace.strace_build(executable, regex, workdir, command, strace_logdir)
-
-
-def go_through_proofs_in_file_and_print_proof_info(coq_package: str,
-                                                   coq_package_pin: str,
-                                                   write=False,
-                                                   ):
+async def go_through_proofs_in_file_and_print_proof_info(coq_package: str,
+                                                         coq_package_pin: str,
+                                                         write=False,
+                                                         ):
     # - for coq_filename in coq_project.filenames():
-    # filenames = get_filenames_from_coq_proj(coq_package, coq_package_pin)  # for filename in pycoq.opam.opam_strace_build(coq_package, coq_package_pin)
     filenames = pycoq.opam.opam_strace_build(coq_package, coq_package_pin)
-    logging.info(f'\n ALL files: {filenames=}')
-    pprint(filenames)
-    # assert '/home/bot/.opam/debug_proj_4.09.1/.opam-switch/build/lf.dev/TwoGoals.v._pycoq_context' in filenames
-    # filenames = ['/home/bot/.opam/debug_proj_4.09.1/.opam-switch/build/lf.dev/TwoGoals.v._pycoq_context']
-    # for filename in filenames:
-    #     logging.info(f"PROCESSING {filename}")
-    #     ctxt = pycoq.common.load_context(filename)
-    #     logging.info(f'{ctxt=}')
-    #     steps = asyncio.run(pycoq.opam.opam_coq_serapi_query_goals(ctxt))
-    #     pprint(steps)
-    #     logging.info(f'{steps=}')
-        #
-        # ans = format_query_goals(steps)
-        # logging.info(f'{ans=}')
-        # check_ans(ans, coq_package, ctxt.target + '._pytest_signature_query_goals',
-        #           write=write)
-
+    pprint(f'{filenames=}')
+    for filename in filenames:
         # - for thm in get_thms(coq_filename):
-            # - for i, stmt in enumerate(thm.tt.proof.stmts):
+        # thms = get_thms(filename)
+        if "TwoGoals" in filename:
+            print(f'-> {filename=}')
+            async with aiofile.AIOFile(filename, 'rb') as fin:
+                in_thm: bool = False
+                coq_ctxt = pycoq.common.load_context(filename)
+                cfg = opam.opam_serapi_cfg(coq_ctxt)
+                logfname = pycoq.common.serapi_log_fname(os.path.join(coq_ctxt.pwd, coq_ctxt.target))
+                res = []
+                async with pycoq.serapi.CoqSerapi(cfg, logfname=logfname) as coq:
+                    for stmt in pycoq.split.coq_stmts_of_context(coq_ctxt):
+                        print(f'--> {stmt=}')
+                        _, _, coq_exc, _ = await coq.execute(stmt)
+                        if coq_exc:
+                            # break
+                            return res
+                        _serapi_goals = await coq.query_goals_completed()
+                        post_fix = coq.parser.postfix_of_sexp(_serapi_goals)
+                        ann = serlib.cparser.annotate(post_fix)
+                        serapi_goals: SerapiGoals = pycoq.query_goals.parse_serapi_goals(coq.parser, post_fix, ann,
+                                                                                         pycoq.query_goals.SExpr)
+                        if "Theorem" in stmt or "Lemma" in stmt:
+                            in_thm: bool = True
+                            # parsed_goals: str = srepr(coq.parser, post_fix, ann, 0, int)
+                            # print(f'{parsed_goals=}')
+                            pprint(f'{serapi_goals=}')
+                            return
+                        elif "Qed." in stmt or stmt in "Defined.":
+                            in_thm: bool = False
+                        # print(f'{serapi_goals=}')
+                        # return
+                        # res.append((stmt, _serapi_goals, serapi_goals))
+                        # - for i, stmt in enumerate(thm.tt.proof.stmts):
+                        # if in_thm:
+                        #     # - get x
+                        #     # ppt = get_ppt()  # no pt has no hole refinement
+                        #     _, _, coq_exc, _ = await coq.execute('Show Proof.')
+                        #     if coq_exc:
+                        #         # break
+                        #         return res
+                        #     _serapi_goals = await coq.query_goals_completed()
+                        #     post_fix = coq.parser.postfix_of_sexp(_serapi_goals)
+                        #     ann = serlib.cparser.annotate(post_fix)
+                        #     serapi_goals = pycoq.query_goals.parse_serapi_goals(coq.parser, post_fix, ann,
+                        #                                                         pycoq.query_goals.SExpr)
+                        #     res.append((stmt, _serapi_goals, serapi_goals))
+                        #     print(f"{serapi_goals=}")
+                        #     return
+                        # ps = get_ps()  # ultimately be (LC, goals, top ten envs from coqhammer)
+                        # ptp += f"\n {stmt}"
+                        # - label proof term with which x corresponds to which holes
+                        # rid: RefinedID = i
+                        # if stmt == "Proof.":  # or i == 0
+                        #     refined_proof_script += "\n{stmt}. refine (hole {rid} _)."
+                        # else:
+                        #     refined_proof_script += "\n{stmt};refine (hole {rid} _)."
+
+                    # print(f'---> {res=}')
 
 
 def main():
@@ -109,9 +116,7 @@ def main():
     opam pin -y --switch debug_proj_4.09.1 debug_proj file:///home/bot/pycoq/debug_proj
     :return:
     """
-    # print(f'Starting main: {main=}')
     sys.setrecursionlimit(10000)
-    # print("recursion limit", sys.getrecursionlimit())
 
     write: bool = False
     coq_package = 'lf'
@@ -121,21 +126,20 @@ def main():
     # # coq_package_pin = f"file://{os.path.expanduser('~/pycoq/debug_proj')}"
     # coq_package_pin = f"{os.path.expanduser('~/pycoq/debug_proj')}"
 
-    # print(f'{coq_package=}')
-    # print(f'{coq_package_pin=}')
-    go_through_proofs_in_file_and_print_proof_info(coq_package, coq_package_pin, write)
+    # go_through_proofs_in_file_and_print_proof_info(coq_package, coq_package_pin, write)
+    asyncio.run(go_through_proofs_in_file_and_print_proof_info(coq_package, coq_package_pin, write))
 
 
 if __name__ == '__main__':
     print()
     print('------------------------ output of python to terminal --------------------------\n')
     start_time = time.time()
+    Path(pycoq.config.get_var('log_filename')).expanduser().unlink(missing_ok=True)
     main()
     duration = time.time() - start_time
     logging.info(f"Duration {duration} seconds.\n\a")
+    print(f"Duration {duration} seconds.\n")
 
     # print('------------------------ output of logfile --------------------------\n')
     # cat_file(pycoq.config.get_var('log_filename'))
-    # print(f'{pycoq.config.get_var("log_filename")=}')
-    # logging.info(f'{pycoq.config.get_var("log_filename")=}')
-    os.remove(pycoq.config.get_var('log_filename'))
+    # Path(pycoq.config.get_var('log_filename')).expanduser().unlink(missing_ok=True)
