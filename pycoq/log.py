@@ -26,7 +26,7 @@ def config_logging():
         level=logging_level(pycoq.config.get_log_level()),
         handlers=[
             logging.FileHandler(pycoq.config.get_log_filename()),
-            logging.StreamHandler()
+            # logging.StreamHandler()
         ]
     )
     

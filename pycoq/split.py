@@ -165,6 +165,7 @@ async def agen_coq_stmts(fin: asyncio.StreamReader, comment_level=0,
     while True:
         bline = await fin.readline()
         line = bline.decode('utf8')
+        print(f'{line=}')
         if line == '':
             break
         positions, comment_level, in_string = string_coq_stmts_pos(
