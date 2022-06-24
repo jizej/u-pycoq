@@ -58,8 +58,8 @@ ADD https://api.github.com/repos/IBM/pycoq/git/refs/heads/main version.json
 # -- setup opam like VP's PyCoq
 RUN opam init --disable-sandboxing
 # compiler + '_' + coq_serapi + '.' + coq_serapi_pin
-RUN opam switch create ocaml-variants.4.07.1+flambda_coq-serapi_coq-serapi_8.11.0+0.11.1 ocaml-variants.4.07.1+flambda
-RUN opam switch ocaml-variants.4.07.1+flambda_coq-serapi_coq-serapi_8.11.0+0.11.1
+RUN opam switch create ocaml-variants.4.07.1+flambda_coq-serapi_coq-serapi.8.11.0+0.11.1 ocaml-variants.4.07.1+flambda
+RUN opam switch ocaml-variants.4.07.1+flambda_coq-serapi_coq-serapi.8.11.0+0.11.1
 RUN eval $(opam env)
 
 RUN opam repo add coq-released https://coq.inria.fr/opam/released
