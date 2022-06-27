@@ -338,18 +338,18 @@ def opam_strace_build(coq_package: str,
     with strace '''
     switch = opam_switch_name(compiler, coq_serapi, coq_serapi_pin)
 
-    # if not opam_create_switch(switch, compiler):
-    #     return False
-    #
-    # if not opam_pin_package(coq_serapi, coq_serapi_pin, coq_serapi, coq_serapi_pin, compiler):
-    #     return False
-    #
-    # if not opam_install_package(switch, coq_serapi):
-    #     return False
-    #
-    # if ((not coq_package_pin is None) and
-    #         not opam_pin_package(coq_package, coq_package_pin, coq_serapi, coq_serapi_pin, compiler)):
-    #     return False
+    if not opam_create_switch(switch, compiler):
+        return False
+
+    if not opam_pin_package(coq_serapi, coq_serapi_pin, coq_serapi, coq_serapi_pin, compiler):
+        return False
+
+    if not opam_install_package(switch, coq_serapi):
+        return False
+
+    if ((not coq_package_pin is None) and
+            not opam_pin_package(coq_package, coq_package_pin, coq_serapi, coq_serapi_pin, compiler)):
+        return False
 
     executable = opam_executable('coqc', switch)
     if executable is None:
@@ -368,6 +368,7 @@ def opam_strace_build(coq_package: str,
                + [coq_package])
 
     logging.info(f"{executable}, {regex}, {workdir}, {command}")
+    logging.info(f"{executable}, {regex}, {workdir}, {' '.join(command)}")
 
     strace_logdir = pycoq.config.get_strace_logdir()
     return pycoq.trace.strace_build(executable, regex, workdir, command, strace_logdir)
