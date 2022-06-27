@@ -27,39 +27,11 @@ ENV PATH="/home/bot/miniconda3/envs/pycoq/bin:${PATH}"
 
 ADD https://api.github.com/repos/IBM/pycoq/git/refs/heads/main version.json
 
-# TODO: doesn't seem to work...try later perhaps: https://stackoverflow.com/questions/55123637/activate-conda-environment-in-docker
-# TODO: if you run VP's image and attack a volume that seems enough for now.
-# RUN conda init bash
-# RUN echo "conda activate pycoq" > ~/.bashrc
-# RUN conda activate pycoq
-#RUN conda update -n base -c defaults conda
-#RUN conda install conda-build
-
-# - setup opam
-#RUN conda install -c conda-forge opam
-#RUN opam init --disable-sandboxing
-#RUN opam switch create debug_proj_4.09.1 4.09.1
-#RUN opam switch debug_proj_4.09.1
-## RUN eval $(opam env)
-#RUN opam repo add coq-released https://coq.inria.fr/opam/released
-#RUN opam pin add -y coq 8.11.0
-#RUN opam install -y coq-serapi
-#RUN eval $(opam env)
-
-#RUN opam init --disable-sandboxing
-#RUN opam switch create debug_proj_4.09.1 4.09.1
-#RUN opam switch debug_proj_4.09.1
-## RUN eval $(opam env)
-#RUN opam repo add coq-released https://coq.inria.fr/opam/released
-#RUN opam pin add -y coq 8.11.0
-#RUN opam install -y coq-serapi
-#RUN eval $(opam env)
-
 # -- setup opam like VP's PyCoq
 RUN opam init --disable-sandboxing
 # compiler + '_' + coq_serapi + '.' + coq_serapi_pin
-RUN opam switch create ocaml-variants.4.07.1+flambda_coq-serapi_coq-serapi.8.11.0+0.11.1 ocaml-variants.4.07.1+flambda
-RUN opam switch ocaml-variants.4.07.1+flambda_coq-serapi_coq-serapi.8.11.0+0.11.1
+RUN opam switch create ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1 ocaml-variants.4.07.1+flambda
+RUN opam switch ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1
 RUN eval $(opam env)
 
 RUN opam repo add coq-released https://coq.inria.fr/opam/released
@@ -75,9 +47,14 @@ RUN opam install -y coq-serapi
 RUN eval $(opam env)
 
 # makes sure depedencies for pycoq are installed once already in the docker image
+RUN pip install ultimate-utils
 RUN pip install pycoq
 # then make sure editable mode is done to be able to use changing pycoq from system
+RUN echo "pip install -e /home/bot/ultimate-utils" >> ~/.bashrc
 RUN echo "pip install -e /home/bot/pycoq" >> ~/.bashrc
+ENV WANDB_API_KEY="SECRET"
+RUN echo "pip install wandb --upgrade" >> ~/.bashrc
+
 RUN echo "eval $(opam env)" >> ~/.bashrc
 # - set env variable for bash terminal prompt p1 to be nicely colored
 ENV force_color_prompt=yes

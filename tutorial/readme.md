@@ -47,6 +47,15 @@ docker run -v /Users/brandomiranda/pycoq:/home/bot/pycoq -ti brandojazz/pycoq:te
 docker run -v /Users/brandomiranda/pycoq:/home/bot/pycoq -ti brandojazz/pycoq:test bash
 ```
 note `/home/bot` is the home directory for bot.
+```bash
+docker run -v /Users/brandomiranda/pycoq:/home/bot/pycoq \
+           -v /Users/brandomiranda/ultimate-utils:/home/bot/ultimate-utils \
+           -ti brandojazz/iit-term-synthesis:test bash
+```
+
+```bash
+python ~/pycoq/tutorial/brandos_pycoq_tutorial.py
+```
 
 To run from Vasily's original docker container do:
 ```bash

@@ -87,11 +87,6 @@ async def go_through_proofs_in_file_and_print_proof_info(coq_package: str,
                         _, _, coq_exc, _ = await coq.execute(stmt)
                         if coq_exc:
                             return res
-                        _serapi_goals = await coq.query_goals_completed()
-                        post_fix = coq.parser.postfix_of_sexp(_serapi_goals)
-                        ann = serlib.cparser.annotate(post_fix)
-                        serapi_goals: SerapiGoals = pycoq.query_goals.parse_serapi_goals(coq.parser, post_fix, ann,
-                                                                                         pycoq.query_goals.SExpr)
                         # --
                         if "Theorem" in stmt or "Lemma" in stmt:
                             in_thm: bool = True
@@ -105,8 +100,14 @@ async def go_through_proofs_in_file_and_print_proof_info(coq_package: str,
                             # - get x
                             ppt = None
 
+                            serapi_goals: SerapiGoals = await coq.serapi_goals()
+                            goal0 = serapi_goals.goals[0]
+                            from pycoq.serapi import sexp
+                            # s = sexp(goal0)
+                            # print(s)
                             ps = None
                             st()
+
 
                             ptp = None
                             x = X(tt=tt, ppt=ppt, ps=ps, ptp=ptp)
@@ -155,6 +156,8 @@ def main():
     # coq_package = 'debug_proj'
     # # coq_package_pin = f"file://{os.path.expanduser('~/pycoq/debug_proj')}"
     # coq_package_pin = f"{os.path.expanduser('~/pycoq/debug_proj')}"
+    print(f'{coq_package=}')
+    print(f'{coq_package_pin=}')
 
     # go_through_proofs_in_file_and_print_proof_info(coq_package, coq_package_pin, write)
     asyncio.run(go_through_proofs_in_file_and_print_proof_info(coq_package, coq_package_pin, write))
