@@ -2,8 +2,7 @@
 functions to work with coq-serapi
 '''
 
-
-# TODO: replace print with logging 
+# TODO: replace print with logging
 
 # TODO: in wait for answer completed if received 
 # (Of_sexp_error"sertop/sertop_ser.ml.cmd_of_sexp: sum tag \"Query\" has incorrect number of arguments"(invalid_sexp(Query((pp((pp_format PpCoq))))Definition th13)))
@@ -13,17 +12,16 @@ import re
 import json
 import time
 
-
 from typing import List, Union, Tuple
 
 import serlib.parser
-
 
 import pycoq.kernel
 
 from dataclasses import dataclass
 from collections.abc import Iterable
 
+from pdb import set_trace as st
 
 COMPLETED_PATTERN = re.compile(r"\(Answer\s\d+\sCompleted\)")
 ANSWER_PATTERN = re.compile(r"\(Answer\s(\d+)(.*)\)")
@@ -61,6 +59,7 @@ def matches_answer_completed(line: str, ind: int):
     """
     return line.strip() == f'(Answer {ind} Completed)'
 
+
 def matches_answer(line: str, sent_index):
     """ 
     if line matches Answer
@@ -70,6 +69,7 @@ def matches_answer(line: str, sent_index):
     match = ANSWER_PATTERN.match(line)
     if match and int(match.group(1)) == sent_index:
         return match.group(2).strip()
+
 
 def parse_added_sid(line: str):
     """
@@ -81,6 +81,7 @@ def parse_added_sid(line: str):
         return int(match.group(1))
     else:
         return None
+
 
 @dataclass
 class CoqExn():
@@ -96,8 +97,6 @@ def parse_coqexn(line: str):
         return CoqExn(message=match.group(0))
     else:
         return None
-
-
 
 
 class CoqSerapi():
@@ -129,7 +128,7 @@ class CoqSerapi():
             raise TypeError("CoqSerapi class must be initialized either with an existing kernel "
                             "object of type pycoq.kernel.LocalKernel or config object of type "
                             " pycoq.common.LocalKernelConfig "
-                            f"but the supplied argument has type {type(kernel)}")
+                            f"but the supplied argument has type {type(kernel_or_cfg)}")
 
         self._sent_history = []
         self._serapi_response_history = []
@@ -148,14 +147,13 @@ class CoqSerapi():
         await self.start()
         return self
 
-    async def __aexit__(self, exception_type, exception_value,traceback):
+    async def __aexit__(self, exception_type, exception_value, traceback):
         await self._kernel.__aexit__(exception_type, exception_value, traceback)
         async for line in self._kernel.readlines():
             self._serapi_response_history.append(line)
 
         if not self._logfname is None:
             await self.save_serapi_log()
-    
 
     async def add(self, coq_stmt: str):
         """ sends serapi command
@@ -171,17 +169,16 @@ class CoqSerapi():
 
         return cmd_tag
 
-
-    async def query_goals(self) -> str:
+    async def query_goals(self, opts: str = '') -> str:
         """ sends serapi command 
         (Query () Goals)
         """
         cmd_tag = len(self._sent_history)
-        cmd = f'(Query () Goals)'
+        cmd = f'(Query ({opts}) Goals)'
         await self._kernel.writeline(cmd)
         self._sent_history.append(cmd)
-        return cmd_tag 
-    
+        return cmd_tag
+
     async def query_definition(self, name) -> str:
         """ 
         sends serapi command
@@ -192,9 +189,6 @@ class CoqSerapi():
         await self._kernel.writeline(cmd)
         self._sent_history.append(cmd)
         return cmd_tag
-    
-    
-
 
     async def exec(self, sid: int):
         """ sends serapi command to execute coq statement sid
@@ -218,7 +212,6 @@ class CoqSerapi():
         self._sent_history.append(cmd)
         return cmd_tag
 
-
     async def wait_for_answer_completed(self, cmd_tag: int):
         """ read and save responses from serapi to _serapi_response_history
         stop when (Answer cmd_tag Completed) is received
@@ -235,8 +228,6 @@ class CoqSerapi():
             if matches_answer_completed(line, cmd_tag):
                 return len(self._serapi_response_history)
 
-
-
     async def add_completed(self, coq_stmt: str) -> Tuple[int, int, Union[int, str]]:
         """ sends serapi command Add CoqSerapi.add()
         awaits completed response; returns list of sids / CoqExns
@@ -245,14 +236,13 @@ class CoqSerapi():
         cmd_tag = await self.add(coq_stmt)
         resp_ind = await self.wait_for_answer_completed(cmd_tag)
 
-        sids = await self.added_sids(cmd_tag) # separate added sids vs CoqExns
+        sids = await self.added_sids(cmd_tag)  # separate added sids vs CoqExns
         self._added_sids.append(sids)
         coqexns = await self.coqexns(cmd_tag)
 
         return (cmd_tag, resp_ind, sids, coqexns)
 
-
-    async def exec_completed(self, sid: int) -> List[str]: # returns list of coqexn
+    async def exec_completed(self, sid: int) -> List[str]:  # returns list of coqexn
         """ sends serapi command Exec
         awaits completed response
         returns ind of completed message
@@ -264,7 +254,7 @@ class CoqSerapi():
 
         return (cmd_tag, resp_ind, coqexns)
 
-    async def cancel_completed(self, sids: List[int]) -> List[str]: # List[CoqExn]
+    async def cancel_completed(self, sids: List[int]) -> List[str]:  # List[CoqExn]
         cmd_tag = await self.cancel(sids)
         resp_ind = await self.wait_for_answer_completed(cmd_tag)
         coqexns = await self.coqexns(cmd_tag)
@@ -273,10 +263,10 @@ class CoqSerapi():
                                f'with CoqExns {coqexns}')
         return (cmd_tag, resp_ind)
 
-    async def _query_goals_completed(self) -> List[str]:
+    async def _query_goals_completed(self, opts: str = '') -> List[str]:
         """ returns literal serapi response (Query () Goals)
         """
-        cmd_tag = await self.query_goals()
+        cmd_tag = await self.query_goals(opts)
         resp_ind = await self.wait_for_answer_completed(cmd_tag)
         coqexns = await self.coqexns(cmd_tag)
         if coqexns != []:
@@ -284,7 +274,7 @@ class CoqSerapi():
                                f'with CoqExns {coqexns}')
         goals = await self._answer(cmd_tag)
         return goals
-    
+
     async def _query_definition_completed(self, name) -> List[str]:
         """
         returns literal serapi response (Query () Definition name)
@@ -297,41 +287,49 @@ class CoqSerapi():
                                f'with CoqExns {coqexns}')
         definition = await self._answer(cmd_tag)
         return definition
-    
-            
-    
-    
-    async def query_goals_completed(self) -> str:
+
+    async def query_goals_completed(self, opts: str = '') -> str:
         """
         returns a single serapi response on (Query () Goals)
         """
-        
-        serapi_goals = await self._query_goals_completed()
-        
+
+        serapi_goals: List[str] = await self._query_goals_completed(opts)
+
         if len(serapi_goals) != 1:
             print("pycoq received list of goals", serapi_goals)
-            raise RuntimError("unexpected behaviour of pycoq - serapi - coq API: "
-                              "query goals returned a list of len != 1 in serapi response")
+            raise RuntimeError("unexpected behaviour of pycoq - serapi - coq API: "
+                               "query goals returned a list of len != 1 in serapi response")
         else:
             return serapi_goals[0]
-    
+
     async def serapi_goals(self) -> SerapiGoals:
         """
         returns parsed SerapiGoals object
         """
-        _serapi_goals = await self.query_goals_completed()
+        _serapi_goals: str = await self.query_goals_completed()
         post_fix = self.parser.postfix_of_sexp(_serapi_goals)
         ann = serlib.cparser.annotate(post_fix)
         return pycoq.query_goals.parse_serapi_goals(self.parser, post_fix, ann, pycoq.query_goals.SExpr)
-        
-        
-        
+
+    async def query_whole_context(self) -> str:
+        """
+        sends serapi command
+        (Query ((pp ((pp_format PpStr)))) Goals)
+        """
+        # cmd_tag = await self._query_goals_completed(opts='(pp ((pp_format PpStr)))')
+        goals: str = await self.query_goals_completed(opts='(pp ((pp_format PpStr)))')
+        # todo: extract string from: '(ObjList((CoqString"none\\n============================\\nforall x : bool, negb (negb x) = x"))) \n----------\\ '
+        # post_fix = self.parser.postfix_of_sexp(_serapi_goals)
+        # ann = serlib.cparser.annotate(post_fix)
+        # return pycoq.query_goals.parse_serapi_goals(self.parser, post_fix, ann, pycoq.query_goals.SExpr)
+        return goals
+
     async def query_definition_completed(self, name) -> str:
         """
         returns a single serapi response on (Query () Definition name))
         """
         definition = await self._query_definition_completed(name)
-        
+
         if len(definition) != 1:
             print("pycoq received definition", definition)
             raise RuntimeError("unexpected behaviour of pycoq - serapi - coq API: "
@@ -356,15 +354,13 @@ class CoqSerapi():
             return (cmd_tag, resp_ind, coqexns, [])
 
         for sid in sids:
-                cmd_tag, resp_ind, coqexns = await self.exec_completed(sid)
-                if coqexns:
-                    (cmd_tag, resp_ind) = await self.cancel_completed(sids)
-                    return (cmd_tag, resp_ind, coqexns, None)
-                self._executed_sids.append(sid)
+            cmd_tag, resp_ind, coqexns = await self.exec_completed(sid)
+            if coqexns:
+                (cmd_tag, resp_ind) = await self.cancel_completed(sids)
+                return (cmd_tag, resp_ind, coqexns, None)
+            self._executed_sids.append(sid)
 
         return (cmd_tag, resp_ind, [], sids)
-
-
 
     async def added_sids(self, cmd_tag) -> List[Union[int, str]]:
         """ 
@@ -379,7 +375,7 @@ class CoqSerapi():
             if line_answer is None or line_answer == 'Completed':
                 cur -= 1
                 continue
-            if line_answer =='Ack':
+            if line_answer == 'Ack':
                 break
             sid = parse_added_sid(line_answer)
             if not sid is None:
@@ -421,30 +417,25 @@ class CoqSerapi():
             if line_answer is None or line_answer == 'Completed':
                 cur -= 1
                 continue
-            if line_answer =='Ack':
+            if line_answer == 'Ack':
                 break
             res.append(line_answer)
             cur -= 1
 
         return res
 
-        
-
-
     async def save_serapi_log(self):
         """
         dumps json log of sent and received serapi lines
         """
-        with open(self._logfname,'w') as f:
+        with open(self._logfname, 'w') as f:
             stderr = []
             async for line in self._kernel.readlines_err(quiet=False):
                 stderr.append(line)
-                
-            json.dump({'response':self._serapi_response_history,
-                       'sent':self._sent_history,
+
+            json.dump({'response': self._serapi_response_history,
+                       'sent': self._sent_history,
                        'stderr': stderr}, fp=f)
-
-
 
     async def echo(self, quiet=False, timeout=None):
         async for line in self._kernel.readlines(timeout=timeout, quiet=quiet):

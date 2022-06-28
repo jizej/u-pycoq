@@ -52,11 +52,6 @@ DataPoints = dict[RID, DataPoint]
 DataFile = dict[Thm, DataPoints]
 DataSet = dict[Filename, DataFile]
 
-ProofState = namedtuple("ProofState", 'goals l_ctx g_ctx')
-
-def get_proof_state() -> ProofState:
-    return ''
-
 
 async def go_through_proofs_in_file_and_print_proof_info(coq_package: str,
                                                          coq_package_pin: str,
@@ -107,7 +102,6 @@ async def go_through_proofs_in_file_and_print_proof_info(coq_package: str,
                             # print(s)
                             ps = None
                             st()
-
 
                             ptp = None
                             x = X(tt=tt, ppt=ppt, ps=ps, ptp=ptp)
