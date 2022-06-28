@@ -221,7 +221,7 @@ def parse_serapi_goals(par: serlib.parser.SExpParser,
     if len(goal) == 0:
         return None
     if len(goal) != 1:
-        raise ValueError(f"the input :{input_s}: does not match [CoqGoal g] specification")
+        raise ValueError(f"the input :{goal}: does not match [CoqGoal g] specification")
 
     coq_goal = goal[0]
     head, args = serlib.cparser.children(post_fix, ann, coq_goal).tolist()

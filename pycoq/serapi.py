@@ -311,18 +311,47 @@ class CoqSerapi():
         ann = serlib.cparser.annotate(post_fix)
         return pycoq.query_goals.parse_serapi_goals(self.parser, post_fix, ann, pycoq.query_goals.SExpr)
 
-    async def query_whole_context(self) -> str:
+    async def query_local_ctx_and_goals(self) -> str:
         """
-        sends serapi command
-        (Query ((pp ((pp_format PpStr)))) Goals)
+        Returns the proof state as the local context + goals as a single string.
+        In particular, sends serapi command
+            (Query ((pp ((pp_format PpStr)))) Goals)
+
+        Details:
+            Want to get the entire context from SerAPI from some Py-SerAPI interface.
+            (Add () "Lemma addn0 n : n + 0 = n.")
+            (Add () "Proof.")
+            (Exec 3)
+            (Query ((pp ((pp_format PpStr)))) Goals)
+
+            Then extract the CoqString from answer:
+            (Answer 2 Completed)
+            (Query ((pp ((pp_format PpStr)))) Goals)
+            (Answer 3 Ack)
+            (Answer 3
+             (ObjList
+              ((CoqString  "\
+                          \n  n : nat\
+                          \n============================\
+                          \nn + 0 = n"))))
+            (Answer 3 Completed)
         """
-        # cmd_tag = await self._query_goals_completed(opts='(pp ((pp_format PpStr)))')
-        goals: str = await self.query_goals_completed(opts='(pp ((pp_format PpStr)))')
-        # todo: extract string from: '(ObjList((CoqString"none\\n============================\\nforall x : bool, negb (negb x) = x"))) \n----------\\ '
+        _local_ctx_and_goals: str = await self.query_goals_completed(opts='(pp ((pp_format PpStr)))')
+        from sexpdata import loads
+        _local_ctx_and_goals: list = loads(_local_ctx_and_goals)
+        local_ctx_and_goals: str = _local_ctx_and_goals[1][0][1]
+        # todo: perhaps use Vp's serlib instead?
         # post_fix = self.parser.postfix_of_sexp(_serapi_goals)
         # ann = serlib.cparser.annotate(post_fix)
         # return pycoq.query_goals.parse_serapi_goals(self.parser, post_fix, ann, pycoq.query_goals.SExpr)
-        return goals
+        return local_ctx_and_goals
+
+    # async def query_coq_proof(self):
+    #     """
+    #     (Query ((pp ((pp_format PpStr)))) CoqProof)
+    #     """
+    #     _local_ctx_and_goals: str = await self.query_goals_completed(opts='(pp ((pp_format PpStr)))')
+    #     return
 
     async def query_definition_completed(self, name) -> str:
         """
