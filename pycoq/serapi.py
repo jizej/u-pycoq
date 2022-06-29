@@ -346,12 +346,30 @@ class CoqSerapi():
         # return pycoq.query_goals.parse_serapi_goals(self.parser, post_fix, ann, pycoq.query_goals.SExpr)
         return local_ctx_and_goals
 
-    # async def query_coq_proof(self):
-    #     """
-    #     (Query ((pp ((pp_format PpStr)))) CoqProof)
-    #     """
-    #     _local_ctx_and_goals: str = await self.query_goals_completed(opts='(pp ((pp_format PpStr)))')
-    #     return
+    async def query_coq_proof(self):
+        """
+        (Query ((pp ((pp_format PpStr)))) CoqProof)
+        """
+        _local_ctx_and_goals: str = await self.query_goals_completed(opts='(pp ((pp_format PpStr)))')
+        raise NotImplemented
+
+    async def get_current_proof_term_via_add(self) -> Union[str, list[CoqExn]]:
+        """
+        Returns the proof term (proof object, lambda term etc.) representation of the proof.
+
+        (Add () "Show Proof.")
+        """
+        coq_stmt: str = 'Show Proof.'
+        cmd_tag, resp_ind, coq_exns, sids = await self.execute(coq_stmt)
+        if coq_exns:
+            return coq_exns
+        # todo: another place where perhaps we should move to VP's serlib? unsure if worth it.
+        _res: str = self._serapi_response_history[-3]
+        from sexpdata import loads, Symbol
+        _res: list = loads(_res)
+        _proof_term: Symbol = _res[-1][-1][-1][-1][-1]
+        proof_term: str = _proof_term.value()
+        return proof_term
 
     async def query_definition_completed(self, name) -> str:
         """
