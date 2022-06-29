@@ -364,10 +364,25 @@ class CoqSerapi():
         if coq_exns:
             return coq_exns
         # todo: another place where perhaps we should move to VP's serlib? unsure if worth it.
-        _res: str = self._serapi_response_history[-3]
-        from sexpdata import loads, Symbol
-        _res: list = loads(_res)
-        _proof_term: Symbol = _res[-1][-1][-1][-1][-1]
+        # - extract_proof_term, following the Feedback constructor from type answer serapir response: http://ejgallego.github.io/coq-serapi/coq-serapi/Serapi/Serapi_protocol/#type-answer.Feedback
+        from sexpdata import loads
+        serapi_response: str = self._serapi_response_history[-3]
+        res: str = serapi_response
+        _res: list = loads(res)
+        feedback: list = _res[-1]
+        assert len(feedback) == 4
+        contents: list = feedback[-1]
+        assert len(contents) == 2
+        message: list = contents[-1]
+        assert len(message) == 5
+        string: list = message[-1]
+        assert string[0].value() == 'str'
+        # - edge case if the sexpdata sees an atom that is a string it didn't wrap it in a Symbol for some reason
+        if isinstance(string[-1], str):
+            ppt: str = string[-1]
+        else:
+            ppt: str = string[-1].value()
+        return ppt
         proof_term: str = _proof_term.value()
         return proof_term
 
