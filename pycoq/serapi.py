@@ -383,8 +383,6 @@ class CoqSerapi():
         else:
             ppt: str = string[-1].value()
         return ppt
-        proof_term: str = _proof_term.value()
-        return proof_term
 
     async def query_definition_completed(self, name) -> str:
         """
