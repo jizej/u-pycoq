@@ -316,6 +316,7 @@ class CoqSerapi():
         Returns the proof state as the local context + goals as a single string.
         In particular, sends serapi command
             (Query ((pp ((pp_format PpStr)))) Goals)
+        If it's not in proving mode (e.g. not in a thoerem) then it returns the empty string ''.
 
         Details:
             Want to get the entire context from SerAPI from some Py-SerAPI interface.
@@ -339,12 +340,28 @@ class CoqSerapi():
         _local_ctx_and_goals: str = await self.query_goals_completed(opts='(pp ((pp_format PpStr)))')
         from sexpdata import loads
         _local_ctx_and_goals: list = loads(_local_ctx_and_goals)
-        local_ctx_and_goals: str = _local_ctx_and_goals[1][0][1]
-        # todo: perhaps use Vp's serlib instead?
-        # post_fix = self.parser.postfix_of_sexp(_serapi_goals)
-        # ann = serlib.cparser.annotate(post_fix)
-        # return pycoq.query_goals.parse_serapi_goals(self.parser, post_fix, ann, pycoq.query_goals.SExpr)
-        return local_ctx_and_goals
+        print(f'{_local_ctx_and_goals=}')
+        # assert _local_ctx_and_goals[0].value() == 'ObjList'
+        if _local_ctx_and_goals[1] == []:
+            return ''  # denotes not in proof mode i.e. empty goals
+        else:
+            local_ctx_and_goals: str = _local_ctx_and_goals[1][0][1]
+            # todo: perhaps use Vp's serlib instead?
+            # post_fix = self.parser.postfix_of_sexp(_serapi_goals)
+            # ann = serlib.cparser.annotate(post_fix)
+            # return pycoq.query_goals.parse_serapi_goals(self.parser, post_fix, ann, pycoq.query_goals.SExpr)
+            return local_ctx_and_goals
+
+    async def in_proof_mode(self) -> bool:
+        """
+        Note in proof mode serapi return:
+            _local_ctx_and_goals=[Symbol('ObjList'), []]
+        """
+        goals: str = await self.query_local_ctx_and_goals()
+        # empty goals, so not in proof mode
+        not_in_proof_mode: bool = goals == ''
+        return not not_in_proof_mode
+
 
     async def query_coq_proof(self):
         """
