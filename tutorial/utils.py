@@ -49,10 +49,10 @@ from pathlib import Path
 
 # def opam_pin_package_to_switch()
 
-def cat_file(path2filename: Union[str, Path]):
-    """prints/displays file contents. Do path / filename or the like outside of this function. ~ is alright to use. """
-    if not isinstance(path2filename, Path):
-        path2filename: Path = Path(path2filename).expanduser()
-    path2filename.expanduser()
-    with open(path2filename, 'r') as f:
-        print(f.read())
+# def cat_file(path2filename: Union[str, Path]):
+#     """prints/displays file contents. Do path / filename or the like outside of this function. ~ is alright to use. """
+#     if not isinstance(path2filename, Path):
+#         path2filename: Path = Path(path2filename).expanduser()
+#     path2filename.expanduser()
+#     with open(path2filename, 'r') as f:
+#         print(f.read())
