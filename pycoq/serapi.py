@@ -311,7 +311,7 @@ class CoqSerapi():
         ann = serlib.cparser.annotate(post_fix)
         return pycoq.query_goals.parse_serapi_goals(self.parser, post_fix, ann, pycoq.query_goals.SExpr)
 
-    async def query_local_ctx_and_goals(self) -> str:
+    async def query_local_ctx_and_goals(self) -> Union[str, list]:
         """
         Returns the proof state as the local context + goals as a single string.
         In particular, sends serapi command
@@ -337,78 +337,123 @@ class CoqSerapi():
                           \nn + 0 = n"))))
             (Answer 3 Completed)
         """
-        _local_ctx_and_goals: str = await self.query_goals_completed(opts='(pp ((pp_format PpStr)))')
         from sexpdata import loads
+
+        _local_ctx_and_goals: str = await self.query_goals_completed(opts='(pp ((pp_format PpStr)))')
         _local_ctx_and_goals: list = loads(_local_ctx_and_goals)
         print(f'{_local_ctx_and_goals=}')
         assert _local_ctx_and_goals[0].value() == 'ObjList'
         if _local_ctx_and_goals[1] == []:
-            return []  # denotes not in proof mode i.e. return no coq string (note proof done is when that string is ''
+            return []  # if not in proof mode there is no coq-str obj so return empty list
         else:
-            # (ObjList ((CoqString "")))
+            # example smallest valid goals: (ObjList ((CoqString "")))
             obj_list: list = _local_ctx_and_goals[1]
-            coq_str_sexp: list = obj_list[0]
-            assert coq_str_sexp[0] == 'CoqString'
-            assert len(coq_str_sexp[0]) == 2
+            coq_str_sexp: list = obj_list[0]  # e.g. (CoqString "")
+            assert len(coq_str_sexp) == 2
+            assert coq_str_sexp[0].value() == 'CoqString'
             # local_ctx_and_goals: str = _local_ctx_and_goals[1][0][1]
             local_ctx_and_goals: str = coq_str_sexp[1]
-
-            # todo: perhaps use Vp's serlib instead?
-            # post_fix = self.parser.postfix_of_sexp(_serapi_goals)
-            # ann = serlib.cparser.annotate(post_fix)
-            # return pycoq.query_goals.parse_serapi_goals(self.parser, post_fix, ann, pycoq.query_goals.SExpr)
             return local_ctx_and_goals
 
     async def in_proof_mode(self) -> bool:
         """
-        Detects if we are in proof mode. This is done by making sure serapi gives an empty list of goals instead of
-        an empty string for the set of goals. Empty string means we are done with proof but in proof mode.
+        Detects if we are in proof mode.
 
-        Details:
-        Send:
-          (Query ((pp ((pp_format PpStr)))) Goals)
-        and thus check if there are any goals.
-        Response is:
-            (Query ((pp ((pp_format PpStr)))) Goals)
-            (Answer 2 Ack)
-            (Answer 2 (ObjList ()))
-            (Answer 2 Completed)
-        meaning we can detect perfectly if we are not in proof mode this way. Note if we are still in proof mode it
-        instead responds with with an empty string as the goals instead of an empty list:
-            (Answer 2 Ack)
-            (Answer 2 (ObjList ((CoqString ""))))
-            (Answer 2 Completed)
-        Summary:
-        Note in proof mode serapi return:
-            _local_ctx_and_goals=[Symbol('ObjList'), []]
-        """
-        goals: str = await self.query_local_ctx_and_goals()
-        not_in_proof_mode: bool = goals == []
-        return not not_in_proof_mode
-
-    async def proof_closed(self) -> bool:
-        """ Returns true if the proof is closed/some. e.g. the next statement is likely a Qed. like thing.
-        This is checked by making sure the goals string is the empty string.
-
-        Details:
-        - empty string from query goals means you're still in a proof but not officially closed it. Only when the
-        object is empty list/nothing are you not in a proof.
-
+        This is done by making sure the serapi goals query returns some CoqString -- even the empty string means your
+        in proof mode still.
+        We are only not in proof mode if when we query the goals it returns nothing -- the empty list [].
         e.g.
+        in proof mode, query goals returns string:
+            case 2: in the middle of some step.
+            ```
             rlwrap sertop --printer=human
+
             (Add () "
-            Theorem easy: nat. apply O.
+            Theorem easy: nat -> nat. intros.
             ")
 
             (Exec 3)
 
             (Query ((pp ((pp_format PpStr)))) Goals)
+            ```
+            (Query ((pp ((pp_format PpStr)))) Goals)
+            (Answer 2 Ack)
+            (Answer 2
+             (ObjList ((CoqString  "\
+                                  \n  H : nat\
+                                  \n============================\
+                                  \nnat"))))
+            (Answer 2 Completed)
+            -> Conclusion: proof state with (lots) of string content, so your in proof mode
+
+
+            case 3: proof is done (but without a Qed.)
+            ```
+            rlwrap sertop --printer=human
+
+            (Add () "
+            Theorem easy: nat -> nat. intros. apply O.
+            ")
+            (Exec 4)
+
+            (Query ((pp ((pp_format PpStr)))) Goals)
+            ```
+            (Query ((pp ((pp_format PpStr)))) Goals)
+            (Answer 2 Ack)
+            (Answer 2 (ObjList ((CoqString ""))))
+            (Answer 2 Completed)
+            -> Conclusion: when proof is done then we have goals being the empty string (note proof term is completed).
+
+
+        if proof is officially closed by a Qed. then the goals query doesn't even return a coq string object:
+            ```
+            rlwrap sertop --printer=human
+
+            (Add () "
+            Theorem easy: nat -> nat. intros. apply O. Qed.
+            ")
+
+            (Exec 5)
+
+            (Query ((pp ((pp_format PpStr)))) Goals)
+            ```
+            (Query ((pp ((pp_format PpStr)))) Goals)
+            (Answer 2 Ack)
+            (Answer 2 (ObjList ()))
+            (Answer 2 Completed)
+            -> Conclusion: when proof is closed, then the goals is literally empty, no coq string object.
+        """
+        goals = await self.query_local_ctx_and_goals()
+        not_in_proof_mode: bool = goals == []
+        in_proof_mode: bool = isinstance(goals, str)
+        in_proof_mode = not not_in_proof_mode and in_proof_mode
+        return in_proof_mode
+
+    async def empty_but_existent_goals(self) -> bool:
+        """
+        Returns true if your current set of goals is empty -- in fact the empty string.
+        Useful to detect if your current coq-stmt (tactic) completed all goals.
+
+        Note: if you executed a Qed. then it will return False, since there exists no goals.
+
+        Details: works by checking the goals is the empty string.
+        e.g. your last tactic closed the proof:
+            rlwrap sertop --printer=human
+
+            (Add () "
+            Theorem easy: nat -> nat. intros. apply O.
+            ")
+            (Exec 4)
+
+            (Query ((pp ((pp_format PpStr)))) Goals)
+            ```
+            (Query ((pp ((pp_format PpStr)))) Goals)
             (Answer 2 Ack)
             (Answer 2 (ObjList ((CoqString ""))))
             (Answer 2 Completed)
         """
-        goals: str = await self.query_local_ctx_and_goals()
-        proof_closed_done: bool = goals == ''
+        goals = await self.query_local_ctx_and_goals()
+        proof_closed_done: bool = goals == ""
         return proof_closed_done
 
     async def query_coq_proof(self):
@@ -427,7 +472,12 @@ class CoqSerapi():
         coq_stmt: str = 'Show Proof.'
         cmd_tag, resp_ind, coq_exns, sids = await self.execute(coq_stmt)
         if coq_exns:
-            return coq_exns
+            print(f'{await self.query_local_ctx_and_goals()=}')
+            print(f'{await self.in_proof_mode()=}')
+            st()
+            raise ValueError(f'Got an error, are you sure you can get the proof term right now? err: {coq_exns=}'
+                             f', {self._sent_history=}')
+            # return coq_exns
         # todo: another place where perhaps we should move to VP's serlib? unsure if worth it.
         # - extract_proof_term, following the Feedback constructor from type answer serapir response: http://ejgallego.github.io/coq-serapi/coq-serapi/Serapi/Serapi_protocol/#type-answer.Feedback
         from sexpdata import loads
