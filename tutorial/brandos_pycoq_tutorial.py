@@ -62,6 +62,7 @@ async def go_through_proofs_in_file_and_print_proof_info(coq_package: str,
     # - for coq_filename in coq_project.filenames():
     filenames = pycoq.opam.opam_strace_build(coq_package, coq_package_pin)
     pprint(f'{filenames=}')
+    filename: str
     for filename in filenames:
         data_set[filename]: DataFile = {}
         # - for thm in get_thms(coq_filename):
