@@ -24,6 +24,7 @@ from pdb import set_trace as st
 
 # refactor globals below to be loaded from a default config
 # see e.g. https://tech.preferred.jp/en/blog/working-with-configuration-in-python/
+from pycoq.common import LocalKernelConfig
 
 MIN_OPAM_VERSION = "2."
 DEFAULT_OCAML = "ocaml-variants.4.07.1+flambda"
@@ -318,7 +319,7 @@ def opam_executable(name: str, switch: str) -> Optional[str]:
         ans = res.stdout.decode().strip()
         if not os.path.isfile(ans):
             logging.error(f"{name} obtained executing {command} "
-                            f"and resolved to {ans} was not found ")
+                          f"and resolved to {ans} was not found ")
             return None
 
         return ans
@@ -495,7 +496,7 @@ def opam_serapi_cfg(coq_ctxt: pycoq.common.CoqContext = None,
                     coq_serapi=COQ_SERAPI,
                     coq_serapi_pin=COQ_SERAPI_PIN,
                     compiler=DEFAULT_OCAML,
-                    debug=False) -> List[Tuple[str]]:
+                    debug=False) -> LocalKernelConfig:
     ''' returns serapi cfg from coq_ctxt '''
     if coq_ctxt == None:
         coq_ctxt = pycoq.common.CoqContext(pwd=os.getcwd(),
@@ -522,10 +523,10 @@ def opam_serapi_cfg(coq_ctxt: pycoq.common.CoqContext = None,
 def log_query_goals_error(_serapi_goals, serapi_goals, serapi_goals_legacy):
     dumpname = 'pycoq_opam_serapi_query_goals.dump'
     logging.info(f"ERROR discrepancy in serapi_goals\n"
-                   f"source: {_serapi_goals}\n"
-                   f"serapi_goals: {serapi_goals}\n"
-                   f"serapi_goals_legacy: {serapi_goals_legacy}\n"
-                   f"input source dumped into {dumpname}\n")
+                 f"source: {_serapi_goals}\n"
+                 f"serapi_goals: {serapi_goals}\n"
+                 f"serapi_goals_legacy: {serapi_goals_legacy}\n"
+                 f"input source dumped into {dumpname}\n")
     open(dumpname, 'w').write(_serapi_goals)
     raise ValueError("ERROR serapi_goals discrepancy")
 
@@ -564,6 +565,7 @@ async def opam_coq_serapi_query_goals(coq_ctxt: pycoq.common.CoqContext,
 
             res.append((stmt, _serapi_goals, serapi_goals))
     return res
+
 
 def opam_list():
     """shows packages in current switch: https://opam.ocaml.org/doc/man/opam-list.html """

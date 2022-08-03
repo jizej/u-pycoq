@@ -1,7 +1,8 @@
 import asyncio
 from contextlib import asynccontextmanager
+from pprint import pprint
 
-from pycoq.common import CoqContext
+from pycoq.common import CoqContext, LocalKernelConfig
 from pycoq.serapi import CoqSerapi
 
 from pdb import set_trace as st
@@ -61,22 +62,22 @@ async def get_coq_serapi(coq_ctxt: CoqContext) -> CoqSerapi:
         logfname = pycoq.common.serapi_log_fname(os.path.join(coq_ctxt.pwd, coq_ctxt.target))
         # needed to be returned to talk to coq
         coq: CoqSerapi = pycoq.serapi.CoqSerapi(cfg, logfname=logfname)
-        st()
-        # await coq.__aenter__()
+        await coq.__aenter__()  # calls self.start(), this  must be called by itself in the with stmt beyond yield
         yield coq
-    except Exception as e:
-        # fin.close()
-        # coq.close()
-        import traceback
-        await coq.__aexit__(Exception, e, traceback.format_exc())
-        # coq_ctxt is just a data class so no need to close it, see: https://github.com/brando90/pycoq/blob/main/pycoq/common.py#L32
+    # except Exception as e:
+    #     # fin.close()
+    #     # coq.close()
+    #     import traceback
+    #     await coq.__aexit__(Exception, e, traceback.format_exc())
+    #     # coq_ctxt is just a data class serapio no need to close it, see: https://github.com/brando90/pycoq/blob/main/pycoq/common.py#L32
     finally:
         # fin.close()
         # coq.close()
         import traceback
-        err_msg: str = 'Finally exception clause'
-        exception_type, exception_value = Exception('Finally exception clause'), ValueError(err_msg)
-        await coq.__aexit__(exception_type, exception_value, traceback.format_exc())
+        # err_msg: str = 'Finally exception clause'
+        # exception_type, exception_value = Exception('Finally exception clause'), ValueError(err_msg)
+        print(f'{traceback.format_exc()=}')
+        # await coq.__aexit__(exception_type, exception_value, traceback.format_exc())
         # coq_ctxt is just a data class so no need to close it, see: https://github.com/brando90/pycoq/blob/main/pycoq/common.py#L32
 
 
@@ -104,10 +105,12 @@ async def loop_through_files_original():
     for filename in filenames:
         print(f'-> {filename=}')
         async with aiofile.AIOFile(filename, 'rb') as fin:
-            coq_ctxt = pycoq.common.load_context(filename)
-            cfg = opam.opam_serapi_cfg(coq_ctxt)
+            coq_ctxt: CoqContext = pycoq.common.load_context(filename)
+            cfg: LocalKernelConfig = opam.opam_serapi_cfg(coq_ctxt)
             logfname = pycoq.common.serapi_log_fname(os.path.join(coq_ctxt.pwd, coq_ctxt.target))
             async with pycoq.serapi.CoqSerapi(cfg, logfname=logfname) as coq:
+                print(f'{coq._kernel=}')
+                st()
                 for stmt in pycoq.split.coq_stmts_of_context(coq_ctxt):
                     print(f'--> {stmt=}')
                     _, _, coq_exc, _ = await coq.execute(stmt)
@@ -139,7 +142,8 @@ async def loop_through_files():
         print(f'-> {filename=}')
         coq_ctxt: CoqContext = pycoq.common.load_context(filename)
         async with get_coq_serapi(coq_ctxt) as coq:
-            print(f'{coq}')
+            print(f'{coq=}')
+            print(f'{coq._kernel=}')
             stmt: str
             for stmt in pycoq.split.coq_stmts_of_context(coq_ctxt):
                 print(f'--> {stmt=}')
@@ -150,5 +154,5 @@ async def loop_through_files():
 
 if __name__ == '__main__':
     asyncio.run(loop_through_files_original())
-    # asyncio.run(loop_through_files())
+    asyncio.run(loop_through_files())
     print('Done!\a\n')
