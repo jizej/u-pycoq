@@ -124,6 +124,7 @@ class CoqSerapi():
         elif isinstance(kernel_or_cfg, pycoq.common.LocalKernelConfig):
             self._kernel = None
             self._cfg = kernel_or_cfg
+            # await self.start() # can't be called here since def is not async but it seems to be needed! or create ur own kernel
         else:
             raise TypeError("CoqSerapi class must be initialized either with an existing kernel "
                             "object of type pycoq.kernel.LocalKernel or config object of type "
@@ -139,7 +140,7 @@ class CoqSerapi():
     async def start(self):
         """ starts new kernel if not already connected
         """
-        if (self._kernel is None):
+        if self._kernel is None:
             self._kernel = pycoq.kernel.LocalKernel(self._cfg)
             await self._kernel.start()
 
@@ -323,9 +324,8 @@ class CoqSerapi():
             (Add () "Lemma addn0 n : n + 0 = n.")
             (Add () "Proof.")
             (Exec 3)
-            (Query ((pp ((pp_format PpStr)))) Goals)
 
-            Then extract the CoqString from answer:
+            (Query ((pp ((pp_format PpStr)))) Goals)
             (Answer 2 Completed)
             (Query ((pp ((pp_format PpStr)))) Goals)
             (Answer 3 Ack)
@@ -359,13 +359,13 @@ class CoqSerapi():
         """
         Detects if we are in proof mode.
 
-        This is done by making sure the serapi goals query returns some CoqString -- even the empty string means your
-        in proof mode still.
-        We are only not in proof mode if when we query the goals it returns nothing -- the empty list [].
+        Only true if goals query cmd returns a CoqString even the empty string.
+
+        Only not in proof mode if query cmd goals returns the empty CoqObjecy.
+
         e.g.
         in proof mode, query goals returns string:
-            case 2: in the middle of some step.
-            ```
+        case 1: in the middle of some step.
             rlwrap sertop --printer=human
 
             (Add () "
@@ -375,8 +375,6 @@ class CoqSerapi():
             (Exec 3)
 
             (Query ((pp ((pp_format PpStr)))) Goals)
-            ```
-            (Query ((pp ((pp_format PpStr)))) Goals)
             (Answer 2 Ack)
             (Answer 2
              (ObjList ((CoqString  "\
@@ -384,11 +382,9 @@ class CoqSerapi():
                                   \n============================\
                                   \nnat"))))
             (Answer 2 Completed)
-            -> Conclusion: proof state with (lots) of string content, so your in proof mode
 
 
-            case 3: proof is done (but without a Qed.)
-            ```
+        case 2: proof is done but still in proof mode (e.g. without a Qed.)
             rlwrap sertop --printer=human
 
             (Add () "
@@ -397,16 +393,12 @@ class CoqSerapi():
             (Exec 4)
 
             (Query ((pp ((pp_format PpStr)))) Goals)
-            ```
-            (Query ((pp ((pp_format PpStr)))) Goals)
             (Answer 2 Ack)
             (Answer 2 (ObjList ((CoqString ""))))
             (Answer 2 Completed)
-            -> Conclusion: when proof is done then we have goals being the empty string (note proof term is completed).
 
 
-        if proof is officially closed by a Qed. then the goals query doesn't even return a coq string object:
-            ```
+        case 3: if outside the proving mode then (e.g. "Qed.") then goala returns empty CoqObject
             rlwrap sertop --printer=human
 
             (Add () "
@@ -416,45 +408,99 @@ class CoqSerapi():
             (Exec 5)
 
             (Query ((pp ((pp_format PpStr)))) Goals)
-            ```
-            (Query ((pp ((pp_format PpStr)))) Goals)
             (Answer 2 Ack)
             (Answer 2 (ObjList ()))
             (Answer 2 Completed)
-            -> Conclusion: when proof is closed, then the goals is literally empty, no coq string object.
         """
         goals = await self.query_local_ctx_and_goals()
-        not_in_proof_mode: bool = goals == []
         in_proof_mode: bool = isinstance(goals, str)
-        in_proof_mode = not not_in_proof_mode and in_proof_mode
         return in_proof_mode
 
-    async def empty_but_existent_goals(self) -> bool:
+    async def focused_goals_closed(self) -> bool:
         """
-        Returns true if your current set of goals is empty -- in fact the empty string.
-        Useful to detect if your current coq-stmt (tactic) completed all goals.
+        Only returns true if your proof has no more goals on the focused goals.
+        If this returns false then you might be in the middle of a proof or outside a proof.
+        Only checks the current goals cmd returns the empty string.
 
-        Note: if you executed a Qed. then it will return False, since there exists no goals.
+        Cases:
+        case 1: right after a focused base case goal.
+        rlwrap sertop --printer=human
 
-        Details: works by checking the goals is the empty string.
-        e.g. your last tactic closed the proof:
-            rlwrap sertop --printer=human
+        (Add ()
+        "
+        Theorem n_plus_zero_eqs_n_inductive:
+            forall n : nat, n + O = n.
+            Proof.
+                intros.
+                induction n.
+                - simpl. reflexivity.
+        "
+        )
+        (Exec 8)
 
-            (Add () "
-            Theorem easy: nat -> nat. intros. apply O.
-            ")
-            (Exec 4)
+        (Query ((pp ((pp_format PpStr)))) Goals)
 
-            (Query ((pp ((pp_format PpStr)))) Goals)
-            ```
-            (Query ((pp ((pp_format PpStr)))) Goals)
-            (Answer 2 Ack)
-            (Answer 2 (ObjList ((CoqString ""))))
-            (Answer 2 Completed)
+        (Query ((pp ((pp_format PpStr)))) Goals)
+        (Answer 2 Ack)
+        (Answer 2 (ObjList ((CoqString ""))))
+        (Answer 2 Completed)
+
+        case 2: right after an inductive step proof.
+        rlwrap sertop --printer=human
+
+        (Add ()
+        "
+        Theorem n_plus_zero_eqs_n_inductive:
+            forall n : nat, n + O = n.
+            Proof.
+                intros. induction n.
+                - simpl. reflexivity.
+                - auto.
+        "
+        )
+        (Exec 10)
+
+        (Query ((pp ((pp_format PpStr)))) Goals)
+        (Answer 2 Ack)
+        (Answer 2 (ObjList ((CoqString ""))))
+        (Answer 2 Completed)
+
+        case 3: when proof term has no holes.
+        rlwrap sertop --printer=human
+
+        (Add ()
+        "
+        Theorem n_plus_zero_eqs_n_inductive:
+            forall n : nat, n + O = n.
+            Proof.
+                intros. induction n.
+                - simpl. reflexivity.
+                - auto.
+                Show Proof.
+        "
+        )
+        (Exec 11)
+
+        (Query ((pp ((pp_format PpStr)))) Goals)
+        (Query ((pp ((pp_format PpStr)))) Goals)
+        (Answer 2 Ack)
+        (Answer 2 (ObjList ((CoqString ""))))
+        (Answer 2 Completed)
         """
         goals = await self.query_local_ctx_and_goals()
         proof_closed_done: bool = goals == ""
         return proof_closed_done
+
+    async def outside_a_proving_env(self) -> bool:
+        """
+        You are outside a proving env if the return of the goals query cmd is the empty prove object (and thus not a
+        string).
+
+        Useful to detect Qed. has been done if previous step goals is the empty string.
+        """
+        goals = await self.query_local_ctx_and_goals()
+        outside_a_proof: bool = goals == []
+        return outside_a_proof
 
     async def query_coq_proof(self):
         """
