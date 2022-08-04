@@ -60,14 +60,19 @@ async def get_coq_serapi(coq_ctxt: CoqContext) -> CoqSerapi:
         yield coq
     except Exception as e:
         import traceback
-        await coq.__aexit__(Exception, e, traceback.format_exc())
+        tb: str = traceback.format_exc()
+        await coq.__aexit__(Exception, e, tb)
+        print(tb)
+        raise e
         # coq_ctxt is just a data class serapio no need to close it, see: https://github.com/brando90/pycoq/blob/main/pycoq/common.py#L32
     finally:
         import traceback
+        tb: str = traceback.format_exc()
         err_msg: str = 'Finally exception clause'
         exception_type, exception_value = Exception('Finally exception clause'), ValueError(err_msg)
-        print(f'{traceback.format_exc()=}')
-        await coq.__aexit__(exception_type, exception_value, traceback.format_exc())
+        print(tb)
+        await coq.__aexit__(exception_type, exception_value, tb)
+        raise ValueError(tb)
         # coq_ctxt is just a data class so no need to close it, see: https://github.com/brando90/pycoq/blob/main/pycoq/common.py#L32
 
 
