@@ -644,6 +644,16 @@ Displays all open goals / existential variables in the current proof along with 
         # parse response see self.get_current_proof_term_via_add as an example
         raise NotImplemented
 
+    async def fully_finished_top_proof(self) -> bool:
+        """
+        Approximately checks if top proof is done ~ Qed-like coq command.
+
+        Details:
+        Previous cmd query goals is empty string "" and next is empty proof object [].
+        We also cancel the execution of the current tactic so that the coq state doesn't change randomly for the user.
+        """
+        raise NotImplemented
+
     async def execute(self, coq_stmt: str) -> List[CoqExn]:
         """ tries to execute coq_stmt
         if CoqExn then cancel coq_stmt
@@ -668,6 +678,12 @@ Displays all open goals / existential variables in the current proof along with 
             self._executed_sids.append(sid)
 
         return (cmd_tag, resp_ind, [], sids)
+
+    async def get_first_n_global_ctx_ids_and_terms(self):
+        raise NotImplemented
+
+    async def get_first_n_global_wrt_coqhammer_ctx_ids_and_terms(self):
+        raise NotImplemented
 
     async def added_sids(self, cmd_tag) -> List[Union[int, str]]:
         """ 
