@@ -330,10 +330,10 @@ def opam_executable(name: str, switch: str) -> Optional[str]:
 
 
 def opam_strace_build(coq_package: str,
-                      coq_package_pin=None,
-                      coq_serapi=COQ_SERAPI,
-                      coq_serapi_pin=COQ_SERAPI_PIN,
-                      compiler=DEFAULT_OCAML) -> List[str]:
+                      coq_package_pin: object = None,
+                      coq_serapi: object = COQ_SERAPI,
+                      coq_serapi_pin: object = COQ_SERAPI_PIN,
+                      compiler: object = DEFAULT_OCAML) -> List[str]:
     ''' returns a list of pycoq context files 
     after opam build of a package; monitoring calls 
     with strace '''
