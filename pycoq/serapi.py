@@ -644,8 +644,10 @@ Displays all open goals / existential variables in the current proof along with 
         # parse response see self.get_current_proof_term_via_add as an example
         raise NotImplemented
 
-    async def start_of_theorem(self, stmt: str) -> bool:
+    async def started_proving(self, stmt: str, undo_coq_state_change: bool = True) -> bool:
         """
+        Checks if after executing the current statement would start a proving e.g. statements Theorem, Lemma, etc.
+        It undos the change of that statement by default avoid side effects.
 
         Details:
             - after stmt exec, goals changes as follows: [] -> ""
@@ -653,9 +655,10 @@ Displays all open goals / existential variables in the current proof along with 
         goals_before_cmd: Union[str, list] = await self.query_local_ctx_and_goals()
         cmd_tag, resp_ind, coq_exns, sids = await self.execute(stmt)
         goals_after_cmd: Union[str, list] = await self.query_local_ctx_and_goals()
-        # cancel stmt you just sent, we only sent it to check make the check we want
-        await self.cancel_completed(sids)
-        raise ValueError('Not Tested')
+        if undo_coq_state_change:
+            # cancel stmt you just sent, we only sent it to check make the check we want
+            await self.cancel_completed(sids)
+        # raise ValueError('Not Tested')
         # note, "" == '' are equal, so check with "" is fine
         # only need to make sure the cancel actually works as expected.
         # [] -> "" ==> thm
@@ -671,9 +674,10 @@ Displays all open goals / existential variables in the current proof along with 
         else:
             return False
 
-    async def fully_finished_top_proof(self) -> bool:
+    async def fully_finished_top_proof(self, stmt: str, undo_coq_state_change: bool = True) -> bool:
         """
-        Approximately checks if top proof is done ~ Qed-like coq command.
+        Approximately checks if top proof is done i.e. Qed-like coq command.
+        It undos the change of that statement by default avoid side effects.
 
         Details:
         Previous cmd query goals is empty string "" and next is empty proof object [].
@@ -683,9 +687,10 @@ Displays all open goals / existential variables in the current proof along with 
         goals_before_cmd: Union[str, list] = await self.query_local_ctx_and_goals()
         cmd_tag, resp_ind, coq_exns, sids = await self.execute(stmt)
         goals_after_cmd: Union[str, list] = await self.query_local_ctx_and_goals()
-        # cancel stmt you just sent, we only sent it to check make the check we want
-        await self.cancel_completed(sids)
-        raise ValueError('Not Tested')
+        if undo_coq_state_change:
+            # cancel stmt you just sent, we only sent it to check make the check we want
+            await self.cancel_completed(sids)
+        # raise ValueError('Not Tested')
         # note, "" == '' are equal, so check with "" is fine
         # only need to make sure the cancel actually works as expected.
         # [] -> "" ==> thm
@@ -700,6 +705,21 @@ Displays all open goals / existential variables in the current proof along with 
         # [] -> [] ==> not in proving
         else:
             return False
+
+    async def would_cause_or_remain_in_proof_mode(self, stmt: str, undo_coq_state_change: bool = True) -> bool:
+        """
+        Returns True if executing the given stmt would cause coq to go or remain in proving mode.
+        It undos the change of that statement by default avoid side effects.
+
+        Details:
+            - only case if executing current stmt would remain outputting goals as a string.
+        """
+        cmd_tag, resp_ind, coq_exns, sids = await self.execute(stmt)
+        in_proof_mode: bool = await self.in_proof_mode()
+        if undo_coq_state_change:
+            # cancel stmt you just sent, we only sent it to check make the check we want
+            await self.cancel_completed(sids)
+        return in_proof_mode
 
     async def execute(self, coq_stmt: str) -> List[CoqExn]:
         """ tries to execute coq_stmt
