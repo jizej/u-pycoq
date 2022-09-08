@@ -4,7 +4,7 @@ import logging
 
 import serlib.parser
 
-from serlib.parser import SExpParser
+# from serlib.parser import SExpParser
 
 
 from typing import Iterable, List, Tuple

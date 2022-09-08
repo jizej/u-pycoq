@@ -25,19 +25,21 @@ Topic :: Scientific/Engineering :: Artificial Intelligence
 Operating System :: POSIX :: Linux
 """
 
-serlib_cparser = setuptools.Extension('serlib.cparser',
-                            sources=['serlib/cparser.cpp'],
-                            include_dirs=[numpy.get_include()],
-                            extra_compile_args = ["-std=c++14"],
-                            )
-    
+# serlib_cparser = setuptools.Extension('serlib.cparser',
+#                             sources=['serlib/cparser.cpp'],
+#                             include_dirs=[numpy.get_include()],
+#                             extra_compile_args = ["-std=c++14"],
+#                             )
+
 setuptools.setup(
     name='pycoq',
     version='0.0.1a1dev3',
     author='Vasily Pestun, Fidel I. Schaposnik Massolo',
     author_email='pestun@ihes.fr',
-    packages=['pycoq', 'serlib', 'pycoq.test'],
-    ext_modules=[serlib_cparser],
+    packages=['pycoq',
+              # 'serlib',
+              'pycoq.test'],
+    # ext_modules=[serlib_cparser],
     license='MIT License',
     long_description=long_description,
     long_description_content_type='text/markdown',
