@@ -133,8 +133,8 @@ class CoqSerapi():
         self._serapi_response_history = []
         self._added_sids = []
         self._executed_sids = []
-        import serlib.parser
-        self.parser = serlib.parser.SExpParser()
+        # import serlib.parser
+        # self.parser = serlib.parser.SExpParser()
 
     async def start(self):
         """ starts new kernel if not already connected
@@ -303,17 +303,17 @@ class CoqSerapi():
             return serapi_goals[0]
 
     # async def serapi_goals(self) -> SerapiGoals:
-    async def serapi_goals(self):
-        """
-        returns parsed SerapiGoals object
-        """
-        from pycoq.query_goals import SerapiGoals
-        _serapi_goals: str = await self.query_goals_completed()
-        post_fix = self.parser.postfix_of_sexp(_serapi_goals)
-        import serlib.parser
-        ann = serlib.cparser.annotate(post_fix)
-        ret_serapi_goals: SerapiGoals = pycoq.query_goals.parse_serapi_goals(self.parser, post_fix, ann, pycoq.query_goals.SExpr)
-        return ret_serapi_goals
+    # async def serapi_goals(self):
+    #     """
+    #     returns parsed SerapiGoals object
+    #     """
+    #     from pycoq.query_goals import SerapiGoals
+    #     _serapi_goals: str = await self.query_goals_completed()
+    #     post_fix = self.parser.postfix_of_sexp(_serapi_goals)
+    #     import serlib.parser
+    #     ann = serlib.cparser.annotate(post_fix)
+    #     ret_serapi_goals: SerapiGoals = pycoq.query_goals.parse_serapi_goals(self.parser, post_fix, ann, pycoq.query_goals.SExpr)
+    #     return ret_serapi_goals
         # return pycoq.query_goals.parse_serapi_goals(self.parser, post_fix, ann, pycoq.query_goals.SExpr)
 
     async def query_local_ctx_and_goals(self) -> Union[str, list]:
