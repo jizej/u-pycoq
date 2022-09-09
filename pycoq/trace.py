@@ -15,12 +15,12 @@ from dataclasses import dataclass, field
 # from strace_parser.json_transformer import to_json
 from strace_parser.parser import get_parser
 
-
 from pycoq.common import CoqContext, context_fname, dump_context
 
 # import pycoq.log
 import logging
 
+from pdb import set_trace as st
 
 
 @dataclass
@@ -32,13 +32,13 @@ class ProcContext():
 
 def hex_rep(b):
     if isinstance(b, str):
-        return "".join(['\\' + hex(c)[1:]  for c in b.encode('utf8')])
+        return "".join(['\\' + hex(c)[1:] for c in b.encode('utf8')])
     else:
         raise ValueError('in hex_rep on ' + str(b))
 
 
 def dehex_str(s):
-    if len(s) > 2 and s[0] == '"' and s[-1] =='"':
+    if len(s) > 2 and s[0] == '"' and s[-1] == '"':
         try:
             temp = 'b' + s
             return ast.literal_eval(temp).decode('utf8')
@@ -55,7 +55,7 @@ def dehex(d):
     elif isinstance(d, list):
         return [dehex(e) for e in d]
     elif isinstance(d, dict):
-        return {k:dehex(v) for k, v in d.items()}
+        return {k: dehex(v) for k, v in d.items()}
 
 
 def simplify(d):
@@ -67,7 +67,7 @@ def simplify(d):
         if d.keys() == {'type', 'value'} and d['type'] == 'other' or d['type'] == 'bracketed':
             return simplify(d['value'])
         else:
-            return {simplify(k) : simplify(v) for k, v in d.items()}
+            return {simplify(k): simplify(v) for k, v in d.items()}
 
 
 # def legacy_parse_strace_line(parser, line):
@@ -81,7 +81,6 @@ def simplify(d):
 #         return simplify(dehex(dargs))
 
 def parse_strace_line(parser, line):
-
     def conv(a):
         if isinstance(a, lark.tree.Tree) and a.data == 'other':
             return conv(a.children[0])
@@ -96,13 +95,13 @@ def parse_strace_line(parser, line):
 
     p = parser.parse(line)
     if (p.data == 'start' and
-        len(p.children) == 1 and p.children[0].data == 'line'):
-            timestamp, body = p.children[0].children
-            if (len(body.children) == 1 and body.children[0].data == 'syscall'):
-                syscall = body.children[0]
-                name, args, result = syscall.children
-                name = str(name.children[0])
-                return conv(args)
+            len(p.children) == 1 and p.children[0].data == 'line'):
+        timestamp, body = p.children[0].children
+        if (len(body.children) == 1 and body.children[0].data == 'syscall'):
+            syscall = body.children[0]
+            name, args, result = syscall.children
+            name = str(name.children[0])
+            return conv(args)
 
     raise ValueError(f"can't parse lark object {p}")
 
@@ -113,7 +112,7 @@ def dict_of_list(l, split='='):
         assert isinstance(e, str)
         pos = e.find(split)
         assert pos > 0
-        d[e[:pos]]  = e[pos+1:]
+        d[e[:pos]] = e[pos + 1:]
     return d
 
 
@@ -148,12 +147,12 @@ def parse_strace_logdir(logdir: str, executable: str, regex: str) -> List[str]:
     '''
 
     logging.info(f"pycoq: parsing strace log "
-                   f"execve({executable}) and recording"
-                   f"arguments that match {regex} in cwd {os.getcwd()}")
+                 f"execve({executable}) and recording"
+                 f"arguments that match {regex} in cwd {os.getcwd()}")
     parser = get_parser()
     res = []
     for logfname_pid in os.listdir(logdir):
-        with open(os.path.join(logdir,logfname_pid), 'r') as log_file:
+        with open(os.path.join(logdir, logfname_pid), 'r') as log_file:
             for line in iter(log_file.readline, ''):
                 if line.find(hex_rep(executable)) != -1:
                     logging.info(f"from {logdir} from {log_file} parsing..")
@@ -166,31 +165,45 @@ def strace_build(executable: str,
                  workdir: Optional[str],
                  command: List[str],
                  strace_logdir=None) -> List[str]:
-
-    ''' trace calls of executable during access to  files that match regex
+    ''' trace calls of executable during access to files that match regex
     in workdir while executing the command and  returns the list of pycoq_context 
     file names
+
+    In the simplest case strace runs the specified command until it
+    exits.  It intercepts and records the system calls which are
+    called by a process and the signals which are received by a
+    process.  The name of each system call, its arguments and its
+    return value are printed on standard error or to the file
+    specified with the -o option.
     '''
+    print('---- Calling strace_build ----')
+
     def _strace_build(executable, regex, workdir, command, logdir):
         logfname = os.path.join(logdir, 'strace.log')
         logging.info(f"pycoq: tracing {executable} accesing {regex} while "
-                       f"executing {command} from {workdir} with "
-                       f"curdir {os.getcwd()}")
+                     f"executing {command} from {workdir} with "
+                     f"curdir {os.getcwd()}")
+        print(f"pycoq: tracing {executable} accesing {regex} while "
+              f"executing {command} from {workdir} with "
+              f"curdir {os.getcwd()}")
         with subprocess.Popen(['strace', '-e', 'trace=execve',
-                               '-v','-ff','-s', '100000000',
-                               '-xx','-ttt',
+                               '-v', '-ff', '-s', '100000000',
+                               '-xx', '-ttt',
                                '-o', logfname] + command,
                               cwd=workdir,
                               text=True,
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE) as proc:
-            for line in iter(proc.stdout.readline,''):
+            for line in iter(proc.stdout.readline, ''):
                 logging.debug(f"strace stdout: {line}")
+                print(f"strace stdout: {line=}")
             logging.info(f"strace stderr: {proc.stderr.read()}"
-                           "waiting strace to finish...")
+                         "waiting strace to finish...")
             proc.wait()
         logging.info('strace finished')
-        return parse_strace_logdir(logdir, executable, regex)
+        res: list[str] = parse_strace_logdir(logdir, executable, regex)
+        print('---- Done with strace_build ----')
+        return res
 
     if strace_logdir is None:
         with tempfile.TemporaryDirectory() as _logdir:
@@ -199,5 +212,3 @@ def strace_build(executable: str,
         os.makedirs(strace_logdir, exist_ok=True)
         strace_logdir_cur = tempfile.mkdtemp(dir=strace_logdir)
         return _strace_build(executable, regex, workdir, command, strace_logdir_cur)
-        
-        
