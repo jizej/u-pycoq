@@ -255,6 +255,8 @@ def strace_build_mac_m1(executable: str,
     workdir=None
     command=['opam', 'reinstall', '--yes', '--switch', 'ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1', '--keep-build-dir', 'lf']
     curdir: os.getcwd()='/home/bot'
+
+    google for replacement (analogue) of functionality of strace for Mac OS and modify the parser that parses output of strace for that “mac-strace” The strace functionality is used to inspect the Coq building system to record all options and arguments and environment for coqc in which each individual .v file has be processed by coqc during the build process. The Coq build system is complicated, and i didn’t parse but resolved to just observing by strace of what the actual Coq does and strace simply records all options and arguments (like -R etc) of what the actual Coq does so that pycoq could call coqc with exactly the same options and arguments
     '''
     print('---- Calling strace_build_mac_m1 ----')
 
@@ -310,6 +312,12 @@ def code_for_mac_m1():
     print(f'coq_package_pin: {coq_package_pin=}')
 
 
+    ### pycoq: tracing /home/bot/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc accesing .*\.v$ while executing ['opam', 'reinstall', '--yes', '--switch', 'ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1', '--keep-build-dir', 'lf'] from None with curdir /home/bot
+    # executable='/home/bot/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc'
+    # regex='.*\\.v$'
+    # workdir=None
+    # command=['opam', 'reinstall', '--yes', '--switch', 'ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1', '--keep-build-dir', 'lf']
+    # curdir: os.getcwd()='/home/bot'
 
     # - get the filename in split
     # path2filenames: list[str] = pycoq.opam.opam_strace_build(coq_proj, coq_proj_pin)
