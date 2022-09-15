@@ -309,9 +309,11 @@ def code_for_mac_m1():
     print(f'coq_package: {coq_package=}')
     print(f'coq_package_pin: {coq_package_pin=}')
 
+
+
     # - get the filename in split
     # path2filenames: list[str] = pycoq.opam.opam_strace_build(coq_proj, coq_proj_pin)
-    path2filenames_raw: list[str] = strace_build_mac_m1(coq_package, coq_package_pin)
+    path2filenames_raw: list[str] = strace_build_mac_m1()
     path2filenames_raw.sort()
     print(f'\n====----> Populate coq pkg/proj data with files: {path2filenames_raw=}')
 
