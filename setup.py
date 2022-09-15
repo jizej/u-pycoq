@@ -51,7 +51,7 @@ setuptools.setup(
                             'test/lf/*',
                             'test/coq-bignums/*',
                             'test/query_goals/*',
-                            'test/serlib/*',
+                            # 'test/serlib/*',
                             'test/trace/*']},
     install_requires=['lark-parser',
                       'pylint',

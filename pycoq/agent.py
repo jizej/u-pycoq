@@ -2,7 +2,7 @@ import pycoq.serapi
 # import pycoq.log
 import logging
 
-import serlib.parser
+# import serlib.parser
 
 # from serlib.parser import SExpParser
 

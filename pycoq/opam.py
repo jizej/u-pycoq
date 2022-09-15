@@ -16,7 +16,7 @@ import pycoq.split
 import pycoq.serapi
 import pycoq.query_goals
 
-import serlib.parser
+# import serlib.parser
 
 import logging
 

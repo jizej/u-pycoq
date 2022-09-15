@@ -214,3 +214,81 @@ def strace_build(executable: str,
         os.makedirs(strace_logdir, exist_ok=True)
         strace_logdir_cur = tempfile.mkdtemp(dir=strace_logdir)
         return _strace_build(executable, regex, workdir, command, strace_logdir_cur)
+
+
+def strace_build_mac_m1(executable: str,
+                 regex: str,
+                 workdir: Optional[str],
+                 command: List[str],
+                 strace_logdir=None) -> List[str]:
+    ''' trace calls of executable during access to files that match regex
+    in workdir while executing the command and  returns the list of pycoq_context
+    file names
+
+    In the simplest case strace runs the specified command until it
+    exits.  It intercepts and records the system calls which are
+    called by a process and the signals which are received by a
+    process.  The name of each system call, its arguments and its
+    return value are printed on standard error or to the file
+    specified with the -o option.
+
+    https://stackoverflow.com/questions/73724074/how-to-call-an-equivalent-command-to-strace-on-mac-ideally-from-python
+
+    plan:
+    - get the command we are running
+    - pip push my pycoq with no name changes so code doesn't break
+    - pull the rest of the repos needed, I don't think anything else since lf is here
+
+    '''
+    print('---- Calling strace_build_mac_m1 ----')
+
+    def _strace_build(executable, regex, workdir, command, logdir):
+        logfname = os.path.join(logdir, 'strace.log')
+        logging.info(f"pycoq: tracing {executable} accesing {regex} while "
+                     f"executing {command} from {workdir} with "
+                     f"curdir {os.getcwd()}")
+        print(f"pycoq: tracing {executable} accesing {regex} while "
+              f"executing {command} from {workdir} with "
+              f"curdir {os.getcwd()}")
+        print(f'{executable=}')
+        print(f'{regex=}')
+        print(f'{workdir=}')
+        print(f'{command=}')
+        print(f'curdir: {os.getcwd()=}')
+        with subprocess.Popen(['dtruss', '-e', 'trace=execve',
+                               '-v', '-ff', '-s', '100000000',
+                               '-xx', '-ttt',
+                               '-o', logfname] + command,
+                              cwd=workdir,
+                              text=True,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE) as proc:
+            for line in iter(proc.stdout.readline, ''):
+                logging.debug(f"strace stdout: {line}")
+                print(f"strace stdout: {line=}")
+            logging.info(f"strace stderr: {proc.stderr.read()}"
+                         "waiting strace to finish...")
+            proc.wait()
+        logging.info('strace finished')
+        res: list[str] = parse_strace_logdir(logdir, executable, regex)
+        print('---- Done with strace_build_mac_m1 ----')
+        return res
+
+    if strace_logdir is None:
+        with tempfile.TemporaryDirectory() as _logdir:
+            return _strace_build(executable, regex, workdir, command, _logdir)
+    else:
+        os.makedirs(strace_logdir, exist_ok=True)
+        strace_logdir_cur = tempfile.mkdtemp(dir=strace_logdir)
+        return _strace_build(executable, regex, workdir, command, strace_logdir_cur)
+
+
+# -
+
+def code_for_mac_m1():
+    pass
+
+
+if __name__ == '__main__':
+    code_for_mac_m1()
+    print('Done!\n\a')
