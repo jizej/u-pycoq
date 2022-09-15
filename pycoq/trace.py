@@ -188,6 +188,11 @@ def strace_build(executable: str,
         print(f"pycoq: tracing {executable} accesing {regex} while "
               f"executing {command} from {workdir} with "
               f"curdir {os.getcwd()}")
+        print(f'{executable=}')
+        print(f'{regex=}')
+        print(f'{workdir=}')
+        print(f'{command=}')
+        print(f'curdir: {os.getcwd()=}')
         with subprocess.Popen(['strace', '-e', 'trace=execve',
                                '-v', '-ff', '-s', '100000000',
                                '-xx', '-ttt',
@@ -205,6 +210,7 @@ def strace_build(executable: str,
         logging.info('strace finished')
         res: list[str] = parse_strace_logdir(logdir, executable, regex)
         print('---- Done with strace_build ----')
+        st()
         return res
 
     if strace_logdir is None:
@@ -238,7 +244,17 @@ def strace_build_mac_m1(executable: str,
     - get the command we are running
     - pip push my pycoq with no name changes so code doesn't break
     - pull the rest of the repos needed, I don't think anything else since lf is here
+    - harcode test
+    - actually, look at commands...we need to provide for reproducibility a way to install opam and all this stuff
+    without docker but in the mac since we are trying to do a mac install. Argh...
 
+    COMMANDS:
+    pycoq: tracing /home/bot/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc accesing .*\.v$ while executing ['opam', 'reinstall', '--yes', '--switch', 'ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1', '--keep-build-dir', 'lf'] from None with curdir /home/bot
+    executable='/home/bot/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc'
+    regex='.*\\.v$'
+    workdir=None
+    command=['opam', 'reinstall', '--yes', '--switch', 'ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1', '--keep-build-dir', 'lf']
+    curdir: os.getcwd()='/home/bot'
     '''
     print('---- Calling strace_build_mac_m1 ----')
 
@@ -286,7 +302,18 @@ def strace_build_mac_m1(executable: str,
 # -
 
 def code_for_mac_m1():
-    pass
+    coq_package = 'lf'
+    coq_package_pin = '~/pycoq/pycoq/test/lf'
+    coq_package_pin = os.path.expanduser(coq_package_pin)
+
+    print(f'coq_package: {coq_package=}')
+    print(f'coq_package_pin: {coq_package_pin=}')
+
+    # - get the filename in split
+    # path2filenames: list[str] = pycoq.opam.opam_strace_build(coq_proj, coq_proj_pin)
+    path2filenames_raw: list[str] = strace_build_mac_m1(coq_package, coq_package_pin)
+    path2filenames_raw.sort()
+    print(f'\n====----> Populate coq pkg/proj data with files: {path2filenames_raw=}')
 
 
 if __name__ == '__main__':
