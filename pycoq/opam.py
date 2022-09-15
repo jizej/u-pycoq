@@ -214,6 +214,7 @@ def opam_pin_package(coq_package: str,
                + root_option()
                + ['--switch', switch]
                + [coq_package, coq_package_pin])
+    logging.info(f"command: {' '.join(command)}")
 
     try:
         res = subprocess.run(command, check=True,

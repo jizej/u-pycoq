@@ -175,6 +175,8 @@ def strace_build(executable: str,
     process.  The name of each system call, its arguments and its
     return value are printed on standard error or to the file
     specified with the -o option.
+
+    https://stackoverflow.com/questions/73724074/how-to-call-an-equivalent-command-to-strace-on-mac-ideally-from-python
     '''
     print('---- Calling strace_build ----')
 

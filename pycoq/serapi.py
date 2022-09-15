@@ -345,7 +345,7 @@ class CoqSerapi():
 
         _local_ctx_and_goals: str = await self.query_goals_completed(opts='(pp ((pp_format PpStr)))')
         _local_ctx_and_goals: list = loads(_local_ctx_and_goals)
-        print(f'{_local_ctx_and_goals=}')
+        # print(f'{_local_ctx_and_goals=}')
         assert _local_ctx_and_goals[0].value() == 'ObjList'
         if _local_ctx_and_goals[1] == []:
             return []  # if not in proof mode there is no coq-str obj so return empty list
