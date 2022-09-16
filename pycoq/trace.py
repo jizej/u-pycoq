@@ -210,7 +210,7 @@ def strace_build(executable: str,
         logging.info('strace finished')
         res: list[str] = parse_strace_logdir(logdir, executable, regex)
         print('---- Done with strace_build ----')
-        st()
+        # st()
         return res
 
     if strace_logdir is None:
@@ -290,6 +290,7 @@ def strace_build_mac_m1(executable: str,
         logging.info('strace finished')
         res: list[str] = parse_strace_logdir(logdir, executable, regex)
         print('---- Done with strace_build_mac_m1 ----')
+        # st()
         return res
 
     if strace_logdir is None:
