@@ -93,6 +93,6 @@ to verify the setup and test of pycoq in docker container on linux
 If you have x86 architeture you might be able to install it on your mac with brew i.e. `brew install strace`:
 
 > Why not install strace externally from your favourite package manager, say brew as in here? You already have root privilege, don't you? This way strace will be called normally in MacOS with full compatibility. 
-You might have to do something with your security setting.
+You might have to do something with your security settings.
 
 ref/credit: https://stackoverflow.com/questions/73724074/how-to-call-an-equivalent-command-to-strace-on-mac-ideally-from-python?noredirect=1#comment130581931_73724074
