@@ -12,7 +12,7 @@ import re
 import json
 import time
 
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Optional
 
 import pycoq.kernel
 
@@ -135,6 +135,8 @@ class CoqSerapi():
         self._executed_sids = []
         # import serlib.parser
         # self.parser = serlib.parser.SExpParser()
+        self._queried_local_ctx_and_goals = []
+
 
     async def start(self):
         """ starts new kernel if not already connected
@@ -416,15 +418,21 @@ class CoqSerapi():
             (Answer 2 (ObjList ()))
             (Answer 2 Completed)
         """
-        goals = await self.query_local_ctx_and_goals()
+        goals: Union[str, list] = await self.query_local_ctx_and_goals()
+        print(f'-> coq.in_proof_mode() says the goals are: {goals=}')
         in_proof_mode: bool = isinstance(goals, str)
         return in_proof_mode
 
     async def focused_goals_closed(self) -> bool:
         """
-        Only returns true if your proof has no more goals on the focused goals.
-        If this returns false then you might be in the middle of a proof or outside a proof.
-        Only checks the current goals cmd returns the empty string.
+        Only returns true if your focused goals has no more goals.
+        There are no more goals if it returns the empty string.
+        Note: if it's the empty string you don't know if you've closed the top proof.
+        if true:
+            -> focused goals are closed (so goals == "", the empty string)
+        else if false:
+            -> then goals != ""...could mean anything (likely your still on a proof if goals is a string or outside a proving env if
+            it returns the empty list. But this function does not check the last too, so false is not super informative).
 
         Cases:
         case 1: right after a focused base case goal.
@@ -492,7 +500,8 @@ class CoqSerapi():
         (Answer 2 Completed)
         """
         goals = await self.query_local_ctx_and_goals()
-        proof_closed_done: bool = goals == ""
+        print(f'-> coq.focused_goals_closed() says the goals are: {goals=}')
+        proof_closed_done: bool = goals == ""  # effectively says the current tactic closed the current focused goals (not top thm goals).
         return proof_closed_done
 
     async def outside_a_proving_env(self) -> bool:
@@ -502,7 +511,8 @@ class CoqSerapi():
 
         Useful to detect Qed. has been done if previous step goals is the empty string.
         """
-        goals = await self.query_local_ctx_and_goals()
+        goals: Union[str, list] = await self.query_local_ctx_and_goals()
+        print(f'-> coq.outside_a_proving_env() says the goals are: {goals=}')
         outside_a_proof: bool = goals == []
         return outside_a_proof
 
@@ -678,7 +688,7 @@ Displays all open goals / existential variables in the current proof along with 
         else:
             return False
 
-    async def fully_finished_top_proof(self, stmt: str, undo_coq_state_change: bool = True) -> bool:
+    async def _fully_finished_top_proof(self, stmt: str, undo_coq_state_change: bool = True) -> bool:
         """
         Approximately checks if top proof is done i.e. Qed-like coq command.
         It undos the change of that statement by default avoid side effects.
@@ -688,6 +698,7 @@ Displays all open goals / existential variables in the current proof along with 
             - after stmt exec, goals changes as follows: "" -> []
         We also cancel the execution of the current tactic so that the coq state doesn't change randomly for the user.
         """
+        raise NotImplemented
         goals_before_cmd: Union[str, list] = await self.query_local_ctx_and_goals()
         cmd_tag, resp_ind, coq_exns, sids = await self.execute(stmt)
         goals_after_cmd: Union[str, list] = await self.query_local_ctx_and_goals()
@@ -841,3 +852,36 @@ Displays all open goals / existential variables in the current proof along with 
 
     def finished(self):
         return not self._kernel._proc.returncode is None
+
+    def top_thm_close(self, stmt: Optional[str] = None) -> bool:
+        """
+
+        Details: only returns the top thm is closed if the goals & local context transition as follows:
+            "" -> []
+        """
+        if self._queried_local_ctx_and_goals == []:
+            raise Exception(f'To use top_thm_close() proof you need to make sure you run the execute(ctmt, coq) function'
+                            f'to populate the coq._queried_local_ctx_and_goals fiedl. '
+                            f'Right now it looks empty: \n{self._queried_local_ctx_and_goals=}'
+                            f'\ncurrent coq object is: {self=}'
+                            f'\nwith fields: {vars(self)=}')
+        # - is top thm closed?
+        prev_goals: Union[str, list] = self._queried_local_ctx_and_goals[-2]
+        current_goals: Union[str, list] = self._queried_local_ctx_and_goals[-1]
+        return prev_goals == "" and current_goals == []
+
+
+async def execute(stmt: str, coq: CoqSerapi):
+    """
+    Execute a Coq statement.
+    """
+    _, _, coq_exc, _ = await coq.execute(stmt)
+    goals: Union[str, list] = coq.query_local_ctx_and_goals()
+    coq._queried_local_ctx_and_goals.append(goals)
+
+    if coq_exc:
+        print('\n-----')
+        print(f'{stmt=}')
+        print(f'{coq_exc[0]}')
+        raise Exception(coq_exc[0])
+        raise coq_exc[0]
