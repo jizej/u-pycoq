@@ -48,7 +48,8 @@ def sexp(x) -> str:
     elif isinstance(x, Iterable):
         return '(' + " ".join(sexp(e) for e in x) + ')'
     else:
-        raise TypeError(f'pycoq.serapi.sexp for type {type(x)} is not yet implemented')
+        return str(x)
+        # raise TypeError(f'pycoq.serapi.sexp for type {type(x)} is not yet implemented')
 
 
 def matches_answer_completed(line: str, ind: int):
