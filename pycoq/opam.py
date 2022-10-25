@@ -469,6 +469,84 @@ def opam_strace_build2(coq_package: str,
     # return pycoq.trace.strace_build(executable, regex, workdir, command, strace_logdir)
 
 
+def opam_strace_build3(coq_package: str,
+                       coq_package_pin: object = None,
+                       coq_serapi: object = COQ_SERAPI,
+                       coq_serapi_pin: object = COQ_SERAPI_PIN,
+                       compiler: object = DEFAULT_OCAML,
+                       coq_proj_splits: Optional = None,
+                       ) -> List[str]:
+    ''' returns a list of pycoq context files
+    after opam build of a package; monitoring calls
+    with strace '''
+    from data_pkg import CoqProjSplits
+    assert isinstance(coq_proj_splits, CoqProjSplits) or coq_proj_splits is None, f'Err: {coq_proj_splits=}'
+    switch = opam_switch_name(compiler, coq_serapi, coq_serapi_pin)
+    if coq_proj_splits.build_command != '':
+        st()
+
+    # - tries to create opam switch
+    if not opam_create_switch(switch, compiler):
+        raise Exception(f'Failed to create switch with args: {switch=}, {compiler=}')
+        # return False
+
+    # - tries to pin install coq_serapi
+    if not opam_pin_package(coq_serapi, coq_serapi_pin, coq_serapi, coq_serapi_pin, compiler):
+        raise Exception(f'Failed to pin serapi: {(coq_serapi, coq_serapi_pin, coq_serapi, coq_serapi_pin, compiler)=}')
+        # return False
+
+    # - tries to install coq_serapi
+    if not opam_install_package(switch, coq_serapi):
+        raise Exception(f'Failed to install serapi: {(switch, coq_serapi)=}')
+        # return False
+
+    # - tries to opam install coq_package
+    if ((not coq_package_pin is None) and
+            not opam_pin_package(coq_package, coq_package_pin, coq_serapi, coq_serapi_pin, compiler)):
+        raise Exception(f'Failed to pin pkg: {(coq_package, coq_package_pin, coq_serapi, coq_serapi_pin, compiler)=}')
+        # return False
+
+    executable = opam_executable('coqc', switch)
+    if executable is None:
+        logging.critical(f"coqc executable is not found in {switch}")
+        return []
+
+    regex = pycoq.pycoq_trace_config.REGEX
+
+    workdir = None
+
+    # - try getting files using VPs way
+    command = (['opam', 'reinstall']
+               + root_option()
+               + ['--yes']
+               + ['--switch', switch]
+               + ['--keep-build-dir']
+               + [coq_package])
+
+    logging.info(f"{executable}, {regex}, {workdir}, {command}")
+    logging.info(f"{executable}, {regex}, {workdir}, {' '.join(command)}")
+
+    strace_logdir = pycoq.config.get_strace_logdir()
+    filenames = pycoq.trace.strace_build(executable, regex, workdir, command, strace_logdir)
+    # if VPs way failed then try to do it with make
+    if filenames == []:
+        command: str = ['make', 'clean', '-C', coq_package_pin]
+        res = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        logging.info(f"{command}: {res.stdout.decode()} {res.stderr.decode()}")
+
+        command: str = ['make', '-C', coq_package_pin]
+        logging.info(f"{executable}, {regex}, {workdir}, {command}")
+        logging.info(f"{executable}, {regex}, {workdir}, {' '.join(command)}")
+        print(f"{executable}, {regex}, {workdir}, {command}")
+        print(f"{executable}, {regex}, {workdir}, {' '.join(command)}")
+        print(f'{strace_logdir=}')
+        strace_logdir = pycoq.config.get_strace_logdir()
+
+        filenames = pycoq.trace.strace_build(executable, regex, workdir, command, strace_logdir)
+    return filenames
+    # return pycoq.trace.strace_build(executable, regex, workdir, command, strace_logdir)
+
+
 def opam_strace_command(command: List[str],
                         workdir: str,
                         coq_serapi=COQ_SERAPI,

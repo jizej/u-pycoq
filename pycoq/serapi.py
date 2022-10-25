@@ -855,6 +855,8 @@ Displays all open goals / existential variables in the current proof along with 
 
     def top_thm_close(self, stmt: Optional[str] = None) -> bool:
         """
+        Returns True if the top theorem is closed (see details for precise meaning) otherwise in any other case
+        it will return False.
 
         Details: only returns the top thm is closed if the goals & local context transition as follows:
             "" -> []
@@ -866,22 +868,27 @@ Displays all open goals / existential variables in the current proof along with 
                             f'\ncurrent coq object is: {self=}'
                             f'\nwith fields: {vars(self)=}')
         # - is top thm closed?
-        prev_goals: Union[str, list] = self._queried_local_ctx_and_goals[-2]
-        current_goals: Union[str, list] = self._queried_local_ctx_and_goals[-1]
+        if len(self._queried_local_ctx_and_goals) <= 2:
+            return False
+        else:
+            prev_goals: Union[str, list] = self._queried_local_ctx_and_goals[-2]
+            current_goals: Union[str, list] = self._queried_local_ctx_and_goals[-1]
         return prev_goals == "" and current_goals == []
 
 
-async def execute(stmt: str, coq: CoqSerapi):
+async def execute(stmt: str, coq: CoqSerapi) -> Union[str, list]:
     """
     Execute a Coq statement.
     """
     _, _, coq_exc, _ = await coq.execute(stmt)
-    goals: Union[str, list] = coq.query_local_ctx_and_goals()
+    goals: Union[str, list] = await coq.query_local_ctx_and_goals()
+    # - store the goals (and local context) so that you can later check what your previous coq stmt & do nice things like know if you've proved the top level thm.
     coq._queried_local_ctx_and_goals.append(goals)
 
     if coq_exc:
-        print('\n-----')
-        print(f'{stmt=}')
-        print(f'{coq_exc[0]}')
+        print('\n-----Error: coq_exc')
+        print(f'Error, tried executing this statement: {stmt=}')
+        print(f'{coq_exc[0]=}')
         raise Exception(coq_exc[0])
         raise coq_exc[0]
+    return goals
