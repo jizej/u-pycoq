@@ -20,7 +20,8 @@ from pdb import set_trace as st
 DEFAULT_CONFIG = defaultdict(None, {
     "opam_root": None,
     "log_level": 4,
-    "log_filename": Path('~/pycoq.log').expanduser()
+    # "log_filename": Path('~/pycoq.log').expanduser()
+    "log_filename": Path('~/data/pycoq.log').expanduser()
 })
 
 PYCOQ_CONFIG_FILE = os.path.join(os.getenv('HOME'), '.pycoq')
