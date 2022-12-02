@@ -9,7 +9,8 @@ import pycoq.config
 
 # FORMATTER = '--> %(asctime)s - %(process)d - %(name)s - %(levelname)s - %(message)s ----'
 # https://stackoverflow.com/questions/533048/how-to-log-source-file-name-and-line-number-in-python
-FORMATTER = '--> [%(asctime)s] p%(process)s {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s <--'
+# FORMATTER = '--> [%(asctime)s] p%(process)s {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s'
+FORMATTER ='{%(pathname)s:%(lineno)d} %(levelname)s: %(message)s'
 
 def logging_level(a: int):
     ''' returns logging level '''

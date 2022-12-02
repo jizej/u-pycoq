@@ -212,35 +212,39 @@ def opam_pin_package(coq_package: str,
     '''
     pins package to source in the switch
     '''
+    logging.info('\n ----')
+    logging.info(f'{opam_pin_package=}')
     switch = opam_switch_name(compiler, coq_serapi, coq_serapi_pin)
-    logging.info(f"pinning package {coq_package} to pin {coq_package_pin} in switch {switch}")
+    logging.info(f"pinning package {coq_package=} to pin {coq_package_pin=} in switch {switch=}")
     command = (['opam', 'pin', '-y']
                + root_option()
                + ['--switch', switch]
                + [coq_package, coq_package_pin])
-    logging.info(f"command: {' '.join(command)}")
 
     try:
-        res = subprocess.run(command, check=True,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        logging.info(f"{command}: {res.stdout.decode()} {res.stderr.decode()}")
+        logging.info(f"-> command=[{' '.join(command)}]")
+
+        res = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        logging.info(f'{res.stdout.decode=}')
+        logging.info(f'{res.stderr.decode=}')
         return True
     # except subprocess.CalledProcessError as error:
     #     logging.critical(f"{command} returned {error.returncode}: {error.stdout.decode()} | {error.stderr.decode()}")
     #     return False
     except Exception as e:
-        logging.info(f"Some error from VP & opam pin: {e=}")
-        print(f"Some error from VP & opam pin: {e=}")
-        logging.info('Going to try make instead')
-        print('--Going to try make instead--')
+        logging.info(f"Attempt from VP didn't work so we are going to try make, VPs error was: {e=}")
+        logging.info('-> Going to try make instead')
+
         command: str = ['make', '-C', coq_package_pin]
-        # st()
-        res = subprocess.run(command, check=True,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        logging.info(f"{command}: {res.stdout.decode()} {res.stderr.decode()}")
-        print('--done with make attempt--')
+        logging.info(f"-> command=[{' '.join(command)}]")
+
+        res = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        logging.info(f"-> command=[{' '.join(command)}]")
+        logging.info(f'{res.stdout.decode=}')
+        logging.info(f'{res.stderr.decode=}')
+        logging.info()
         return True
 
 
@@ -483,39 +487,51 @@ def opam_strace_build3(coq_package: str,
     ''' returns a list of pycoq context files
     after opam build of a package; monitoring calls
     with strace '''
+    logging.info(f'{opam_strace_build3=}')
+
     from data_pkg import CoqProjSplits
     assert isinstance(coq_proj_splits, CoqProjSplits) or coq_proj_splits is None, f'Err: {coq_proj_splits=}'
+
     switch = opam_switch_name(compiler, coq_serapi, coq_serapi_pin)
     if coq_proj_splits.build_command != '':
         st()
 
     # - tries to create opam switch
-    logging.info(f'about to install switch: {switch=}, {compiler=}')
+    logging.info(f'-> about to install switch: {switch=}, {compiler=}')
     if not opam_create_switch(switch, compiler):
         raise Exception(f'Failed to create switch with args: {switch=}, {compiler=}')
         # return False
-    logging.info(f'success installing switch: {switch=}, {compiler=}')
+    # logging.info(f'-> success installing switch: {switch=}, {compiler=}')
 
     # - tries to pin install coq_serapi
+    logging.info(f'-> about to pin coq pkg coq-serapi: coq_pkg={coq_serapi}')
     if not opam_pin_package(coq_serapi, coq_serapi_pin, coq_serapi, coq_serapi_pin, compiler):
         raise Exception(f'Failed to pin serapi: {(coq_serapi, coq_serapi_pin, coq_serapi, coq_serapi_pin, compiler)=}')
         # return False
 
     # - tries to install coq_serapi
+    logging.info(f'-> about to install coq-serapi: package={coq_serapi}')
     if not opam_install_package(switch, coq_serapi):
         raise Exception(f'Failed to install serapi: {(switch, coq_serapi)=}')
         # return False
 
     # - tries to opam install coq_package
+    logging.info(f'--> about to install coq-package: {coq_package_pin=}')
+    logging.info(f'{not coq_package_pin is None=}')
+    logging.info(f'--> about to pin: {(coq_package, coq_package_pin, coq_serapi, coq_serapi_pin, compiler)=}')
     if ((not coq_package_pin is None) and
             not opam_pin_package(coq_package, coq_package_pin, coq_serapi, coq_serapi_pin, compiler)):
-        raise Exception(f'Failed to pin pkg: {(coq_package, coq_package_pin, coq_serapi, coq_serapi_pin, compiler)=}')
+        logging.critical('raises error if the coq pkg pin is not None (i.e. it is some pkg) and we failed to pin the pkg')
+        err_msg: str = f'Failed to pin pkg: {(coq_package, coq_package_pin, coq_serapi, coq_serapi_pin, compiler)=}'
+        logging.critical(err_msg)
+        raise Exception(err_msg)
         # return False
 
     executable = opam_executable('coqc', switch)
     if executable is None:
         logging.critical(f"coqc executable is not found in {switch}")
         return []
+    logging.info(f'-> coqc was found! :) {executable=}')
 
     regex = pycoq.pycoq_trace_config.REGEX
 
@@ -529,8 +545,8 @@ def opam_strace_build3(coq_package: str,
                + ['--keep-build-dir']
                + [coq_package])
 
-    logging.info(f"{executable}, {regex}, {workdir}, {command}")
-    logging.info(f"{executable}, {regex}, {workdir}, {' '.join(command)}")
+    # logging.info(f"{executable}, {regex}, {workdir}, {command}")
+    logging.info(f"---> about to run this cmd to get filenames: {executable=}, {regex=}, {workdir=}, {' '.join(command)=}")
 
     strace_logdir = pycoq.config.get_strace_logdir()
     filenames = pycoq.trace.strace_build(executable, regex, workdir, command, strace_logdir)
