@@ -6,8 +6,8 @@ functions to work with coq-serapi
 
 # TODO: in wait for answer completed if received 
 # (Of_sexp_error"sertop/sertop_ser.ml.cmd_of_sexp: sum tag \"Query\" has incorrect number of arguments"(invalid_sexp(Query((pp((pp_format PpCoq))))Definition th13)))
-# then stop waiting and return error 
-
+# then stop waiting and return error
+import logging
 import re
 import json
 import time
@@ -420,7 +420,8 @@ class CoqSerapi():
             (Answer 2 Completed)
         """
         goals: Union[str, list] = await self.query_local_ctx_and_goals()
-        print(f'-> coq.in_proof_mode() says the goals are: {goals=}')
+        # print(f'-> coq.in_proof_mode() says the goals are: {goals=}')
+        # logging.info(f'-> coq.in_proof_mode() says the goals are: {goals=}')
         in_proof_mode: bool = isinstance(goals, str)
         return in_proof_mode
 
@@ -501,7 +502,8 @@ class CoqSerapi():
         (Answer 2 Completed)
         """
         goals = await self.query_local_ctx_and_goals()
-        print(f'-> coq.focused_goals_closed() says the goals are: {goals=}')
+        # print(f'-> coq.focused_goals_closed() says the goals are: {goals=}')
+        # logging.info(f'-> coq.focused_goals_closed() says the goals are: {goals=}')
         proof_closed_done: bool = goals == ""  # effectively says the current tactic closed the current focused goals (not top thm goals).
         return proof_closed_done
 
@@ -513,7 +515,8 @@ class CoqSerapi():
         Useful to detect Qed. has been done if previous step goals is the empty string.
         """
         goals: Union[str, list] = await self.query_local_ctx_and_goals()
-        print(f'-> coq.outside_a_proving_env() says the goals are: {goals=}')
+        # print(f'-> coq.outside_a_proving_env() says the goals are: {goals=}')
+        # logging.info(f'-> coq.outside_a_proving_env() says the goals are: {goals=}')
         outside_a_proof: bool = goals == []
         return outside_a_proof
 
@@ -533,8 +536,8 @@ class CoqSerapi():
         coq_stmt: str = 'Show Proof.'
         cmd_tag, resp_ind, coq_exns, sids = await self.execute(coq_stmt)
         if coq_exns:
-            print(f'{await self.query_local_ctx_and_goals()=}')
-            print(f'{await self.in_proof_mode()=}')
+            logging.info(f'{await self.query_local_ctx_and_goals()=}')
+            logging.info(f'{await self.in_proof_mode()=}')
             st()
             raise ValueError(f'Got an error, are you sure you can get the proof term right now? err: {coq_exns=}'
                              f', {self._sent_history=}')
@@ -567,7 +570,8 @@ class CoqSerapi():
         definition = await self._query_definition_completed(name)
 
         if len(definition) != 1:
-            print("pycoq received definition", definition)
+            # print("pycoq received definition", definition)
+            logging.info("pycoq received definition", definition)
             raise RuntimeError("unexpected behaviour of pycoq - serapi - coq API: "
                                "definition returned a list of len != 1 in serapi response")
         else:
@@ -887,9 +891,9 @@ async def execute(stmt: str, coq: CoqSerapi) -> Union[str, list]:
     coq._queried_local_ctx_and_goals.append(goals)
 
     if coq_exc:
-        print('\n-----Error: coq_exc')
-        print(f'Error, tried executing this statement: {stmt=}')
-        print(f'{coq_exc[0]=}')
+        logging.critical('\n-----Error: coq_exc')
+        logging.critical(f'Error, tried executing this statement: {stmt=}')
+        logging.critical(f'{coq_exc[0]=}')
         raise Exception(coq_exc[0])
-        raise coq_exc[0]
+        # raise coq_exc[0]
     return goals

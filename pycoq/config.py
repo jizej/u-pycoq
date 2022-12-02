@@ -112,16 +112,16 @@ def touch_file(path2file: str):
     Path(path2file).expanduser().touch()
 
 
-def create_config():
-    pycoq_config = defaultdict(None, {
-        "opam_root": None,
-        "log_level": 4,
-        "log_filename": Path('~/pycoq.log').expanduser()
-    })
-    # create a clean version of the log file
-    print(f'--> Path to our pycoq config file: {PYCOQ_CONFIG_FILE=}')
-    with open(PYCOQ_CONFIG_FILE, 'w+') as f:
-        json.dump(pycoq_config, f, indent=4, sort_keys=True)
-    print('Print contents of our pycoq config file:')
-    from pprint import pprint
-    pprint(pycoq_config)
+# def create_config():
+#     pycoq_config = defaultdict(None, {
+#         "opam_root": None,
+#         "log_level": 4,
+#         "log_filename": Path('~/pycoq.log').expanduser()
+#     })
+#     # create a clean version of the log file
+#     print(f'--> Path to our pycoq config file: {PYCOQ_CONFIG_FILE=}')
+#     with open(PYCOQ_CONFIG_FILE, 'w+') as f:
+#         json.dump(pycoq_config, f, indent=4, sort_keys=True)
+#     print('Print contents of our pycoq config file:')
+#     from pprint import pprint
+#     pprint(pycoq_config)

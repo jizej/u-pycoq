@@ -1,5 +1,8 @@
 '''
 functions to work with opam
+
+Opam terms:
+opam pin/pinning = ... why do we need this? difference with opam install?
 '''
 
 from typing import Optional, List, Tuple
@@ -133,6 +136,7 @@ def opam_add_repo_coq() -> bool:
         return opam_update()
     except subprocess.CalledProcessError as error:
         logging.critical(f"{command} returned {error.returncode}: {error.stdout.decode()} {error.stderr.decode()}")
+        logging.critical(f"{' '.join(command)} returned {error.returncode}: {error.stdout.decode()} {error.stderr.decode()}")
         return False
 
 
@@ -486,9 +490,11 @@ def opam_strace_build3(coq_package: str,
         st()
 
     # - tries to create opam switch
+    logging.info(f'about to install switch: {switch=}, {compiler=}')
     if not opam_create_switch(switch, compiler):
         raise Exception(f'Failed to create switch with args: {switch=}, {compiler=}')
         # return False
+    logging.info(f'success installing switch: {switch=}, {compiler=}')
 
     # - tries to pin install coq_serapi
     if not opam_pin_package(coq_serapi, coq_serapi_pin, coq_serapi, coq_serapi_pin, compiler):
