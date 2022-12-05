@@ -222,7 +222,7 @@ def opam_pin_package(coq_package: str,
                + [coq_package, coq_package_pin])
 
     try:
-        logging.info(f"-> command=[{' '.join(command)}]")
+        logging.info(f"-> command={' '.join(command)}")
 
         res = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -236,15 +236,14 @@ def opam_pin_package(coq_package: str,
         logging.info(f"Attempt from VP didn't work so we are going to try make, VPs error was: {e=}")
         logging.info('-> Going to try make instead')
 
-        command: str = ['make', '-C', coq_package_pin]
-        logging.info(f"-> command=[{' '.join(command)}]")
+        command: list = ['make', '-C', coq_package_pin]
+        logging.info(f"-> command={' '.join(command)}")
 
         res = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         logging.info(f"-> command=[{' '.join(command)}]")
         logging.info(f'{res.stdout.decode=}')
         logging.info(f'{res.stderr.decode=}')
-        logging.info()
         return True
 
 

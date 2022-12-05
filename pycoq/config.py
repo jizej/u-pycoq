@@ -9,7 +9,7 @@ todo:
 # see https://tech.preferred.jp/en/blog/working-with-configuration-in-python/
 from pathlib import Path
 
-from typing import Dict, Union
+from typing import Dict, Union, Optional
 from collections import defaultdict
 import json
 import os
@@ -125,3 +125,12 @@ def touch_file(path2file: str):
 #     print('Print contents of our pycoq config file:')
 #     from pprint import pprint
 #     pprint(pycoq_config)
+
+def clear_pycoq_logging_file(pycoq_logfile_name: Optional[Union[str, Path]] = None):
+    """
+    Clears the contents of the logging file that pycoq sets up for the logging module for your python scripts.
+    """
+    from uutils import clear_file_contents
+    if pycoq_logfile_name is not None:
+        pycoq_logfile_name: Path = Path(DEFAULT_CONFIG['log_filename']).expanduser()
+    clear_file_contents(pycoq_logfile_name)
