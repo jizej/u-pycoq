@@ -1,11 +1,5 @@
 """
 TODO
-
-
---
-    pycoq_logfile_name: Path = Path(pycoq.config.DEFAULT_CONFIG['log_filename']).expanduser()
-    clear_file_contents(pycoq_logfile_name)
-
 """
 import time
 
