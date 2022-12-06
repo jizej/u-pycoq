@@ -61,31 +61,15 @@ rbenv global 3.1.2
 
 ruby -v
 
-# - opam (snap, no sudo)
-## ref: https://askubuntu.com/questions/339/how-can-i-install-a-package-without-root-access
-#apt-get download opam
-##apt-get download opam_1.2.2-4_amd64
-##ls | less
-#mkdir -p ~/.local
-#dpkg -x opam_1.2.2-4_amd64.deb ~/.local/bin
-#export PATH="$HOME/.local/bin:$PATH"
-#echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc.user
-#source ~/.bashrc.user
-#
-#tr ':' '\n' <<< "$PATH"
-#
-#opam --version
-
 ## - official install ref: https://opam.ocaml.org/doc/Install.html
 ## ssh brando9@hyperturing1.stanford.edu
 ## ssh brando9@hyperturing2.stanford.edu
 ## ssh brando9@turing1.stanford.edu
-#mkdir -p ~/.local/
-#bash -c "sh <(curl -fsSL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)"
+mkdir -p ~/.local/bin
+bash -c "sh <(curl -fsSL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)"
 ## type manually
-#~/.local/
-## note since it detects it in /usr/bin/opam it fails since then it tries to move opam from /usr/bin/opam to local
-## ...
+~/.local/bin
+## note since if it detects it in /usr/bin/opam it fails since then it tries to move opam from /usr/bin/opam to local
 
 # -- setup opam like the original pycoq
 opam init --disable-sandboxing
