@@ -15,6 +15,7 @@ then
 #    mkdir -p ~/.local
 #    PREFIX=~/.local ./ruby-build/install.sh
 #    ~/.local/ruby-build 3.1.2 ~/.local/
+# ref: https://superuser.com/questions/340490/how-to-install-and-use-different-versions-of-ruby/1756372#1756372
     mkdir ~/.rbenv
     cd ~/.rbenv
     git clone https://github.com/rbenv/rbenv.git .
