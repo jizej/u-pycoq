@@ -82,9 +82,6 @@ ruby -v
 which ruby
 
 ## - official install ref: https://opam.ocaml.org/doc/Install.html
-## ssh brando9@hyperturing1.stanford.edu
-## ssh brando9@hyperturing2.stanford.edu
-## ssh brando9@turing1.stanford.edu
 mkdir -p ~/.local/bin
 bash -c "sh <(curl -fsSL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)"
 ## type manually
