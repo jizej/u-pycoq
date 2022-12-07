@@ -98,11 +98,11 @@ eval $(opam env)
 opam switch create ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1 ocaml-variants.4.07.1+flambda
 opam switch ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1
 eval $(opam env)
+opam switch
 
 opam repo add coq-released https://coq.inria.fr/opam/released
 # opam pin add -y coq 8.11.0
 opam repo --all-switches add --set-default coq-released https://coq.inria.fr/opam/released
-opam update --all
 opam pin add -y coq 8.11.0
 
 #opam install -y --switch ocaml-variants.4.07.1+flambda_coq-serapi_coq-serapi_8.11.0+0.11.1 coq-serapi 8.11.0+0.11.1

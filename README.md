@@ -83,8 +83,14 @@ For basics see the example `tutorial/tutorial_pycoq.py` and the test scripts in 
 
 ## Build pycoq in Docker
 Install docker, git clone the source repository and from the directory containing Dockerfile run
-```
-docker build -t pycoq:test .
+```bash
+#docker build -f ~/pycoq/Dockerfile_arm -t brandojazz/pycoq:latest_arm ~/pycoq/
+docker build -f ~/pycoq/Dockerfile -t brandojazz/pycoq:latest_arm ~/pycoq/
+#docker build -t brandojazz/pycoq:latest_arm .
+
+docker login
+docker push brandojazz/iit-term-synthesis:test
+docker images
 ```
 to verify the setup and test of pycoq in docker container on linux
 
