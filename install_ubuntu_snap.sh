@@ -35,12 +35,6 @@ conda init bash
 conda update -n base -c defaults conda
 conda install conda-build
 
-conda create -n metalearning_gpu python=3.9
-conda activate metalearning_gpu
-conda create -n iit_synthesis python=3.9
-conda activate iit_synthesis
-conda list
-
 conda create -n iit_synthesis python=3.9
 conda activate iit_synthesis
 
@@ -89,10 +83,11 @@ bash -c "sh <(curl -fsSL https://raw.githubusercontent.com/ocaml/opam/master/she
 ## note since if it detects it in /usr/bin/opam it fails since then it tries to move opam from /usr/bin/opam to local
 
 # -- setup opam like the original pycoq
-opam init --disable-sandboxing
-eval $(opam env --switch=default)
 opam update --all
 eval $(opam env)
+opam init --disable-sandboxing
+eval $(opam env --switch=default)
+
 # compiler + '_' + coq_serapi + '.' + coq_serapi_pin
 # ref: https://stackoverflow.com/questions/74697011/how-does-one-install-a-specific-ocaml-compiler-when-it-doesnt-appear-on-the-opa
 opam switch create ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1 ocaml-variants.4.07.1+flambda
@@ -101,13 +96,11 @@ eval $(opam env)
 opam switch
 
 opam repo add coq-released https://coq.inria.fr/opam/released
-# opam pin add -y coq 8.11.0
 opam repo --all-switches add --set-default coq-released https://coq.inria.fr/opam/released
 opam pin add -y coq 8.11.0
 
 #opam install -y --switch ocaml-variants.4.07.1+flambda_coq-serapi_coq-serapi_8.11.0+0.11.1 coq-serapi 8.11.0+0.11.1
 opam install -y coq-serapi
-
 eval $(opam env)
 
 # - install utop
