@@ -81,7 +81,7 @@ rbenv global 3.1.2
 ruby -v
 which ruby
 
-## - official install ref: https://opam.ocaml.org/doc/Install.html
+## - opam official install ref: https://opam.ocaml.org/doc/Install.html
 mkdir -p ~/.local/bin
 bash -c "sh <(curl -fsSL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)"
 ## type manually
