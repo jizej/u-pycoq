@@ -1,5 +1,24 @@
 #!/usr/bin/env bash
 
+# - CAREFUL, if a job is already running it could do damage to it, rm reauth process, qian doesn't do it so skip it
+# top -u brando9
+#
+# pkill -9 tmux -u brando9; pkill -9 krbtmux -u brando9; pkill -9 reauth -u brando9; pkill -9 python -u brando9; pkill -9 wandb-service* -u brando9;
+#
+# pkill -9 python -u brando9; pkill -9 wandb-service* -u brando9;
+#
+# krbtmux
+# reauth
+# nvidia-smi
+# sh ~/.bashrc.user
+# sh main_krbtmux.sh
+#
+# tmux attach -t 0
+
+# ssh brando9@hyperturing1.stanford.edu
+# ssh brando9@hyperturing2.stanford.edu
+# ssh brando9@turing1.stanford.edu
+
 # - install conda
 echo $HOME
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
@@ -25,7 +44,7 @@ conda list
 conda create -n iit_synthesis python=3.9
 conda activate iit_synthesis
 
-# - install ruby
+# - install rbenv for installing ruby
 mkdir ~/.rbenv
 cd ~/.rbenv
 git clone https://github.com/rbenv/rbenv.git .
@@ -34,8 +53,8 @@ export PATH="$HOME/.rbenv/bin:$PATH"
 eval "$(rbenv init -)"
 echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> ~/.bashrc.user
 echo 'eval "$(rbenv init -)"' >> ~/.bashrc.user
-#    exec $SHELL
-#bash
+exec $SHELL
+bash
 source ~/.bashrc.user
 
 rbenv -v
@@ -47,8 +66,8 @@ git clone https://github.com/rbenv/ruby-build.git .
 
 export PATH="$HOME/.ruby-build/bin:$PATH"
 echo 'export PATH="$HOME/.ruby-build/bin:$PATH"' >> ~/.bashrc.user
-#    exec $SHELL
-#bash
+exec $SHELL
+bash
 source ~/.bashrc.user
 
 ruby-build --version
@@ -60,6 +79,7 @@ rbenv install 3.1.2
 rbenv global 3.1.2
 
 ruby -v
+which ruby
 
 ## - official install ref: https://opam.ocaml.org/doc/Install.html
 ## ssh brando9@hyperturing1.stanford.edu
@@ -73,6 +93,7 @@ bash -c "sh <(curl -fsSL https://raw.githubusercontent.com/ocaml/opam/master/she
 
 # -- setup opam like the original pycoq
 opam init --disable-sandboxing
+eval $(opam env --switch=default)
 opam update --all
 eval $(opam env)
 # compiler + '_' + coq_serapi + '.' + coq_serapi_pin
