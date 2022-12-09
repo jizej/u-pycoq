@@ -165,8 +165,9 @@ def strace_build(executable: str,
                  workdir: Optional[str],
                  command: List[str],
                  strace_logdir=None) -> List[str]:
-    ''' trace calls of executable during access to files that match regex
-    in workdir while executing the command and  returns the list of pycoq_context 
+    """
+    Trace calls of executable during access to files that match regex
+    in workdir while executing the command and  returns the list of pycoq_context
     file names
 
     In the simplest case strace runs the specified command until it
@@ -176,8 +177,9 @@ def strace_build(executable: str,
     return value are printed on standard error or to the file
     specified with the -o option.
 
-    https://stackoverflow.com/questions/73724074/how-to-call-an-equivalent-command-to-strace-on-mac-ideally-from-python
-    '''
+    ref:
+        - replacing strace in mac: https://stackoverflow.com/questions/73724074/how-to-call-an-equivalent-command-to-strace-on-mac-ideally-from-python
+    """
     print('---- Calling strace_build ----')
 
     def _strace_build(executable, regex, workdir, command, logdir):
