@@ -19,6 +19,10 @@
 # ssh brando9@hyperturing2.stanford.edu
 # ssh brando9@turing1.stanford.edu
 
+source ~/.bashrc.lfs
+conda activate iit_synthesis
+cd /afs/cs.stanford.edu/u/brando9/proverbot9001
+
 # - install conda
 echo $HOME
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
@@ -110,6 +114,14 @@ opam install utop
 mkdir ~/data/
 
 # - get git projs
+echo $HOME
+ln -s /afs/cs.stanford.edu/u/brando9/ultimate-utils $HOME/ultimate-utils
+#ln -s /afs/cs.stanford.edu/u/brando9/diversity-for-predictive-success-of-meta-learning $HOME/diversity-for-predictive-success-of-meta-learning
+ln -s /afs/cs.stanford.edu/u/brando9/pycoq $HOME/pycoq
+ln -s /afs/cs.stanford.edu/u/brando9/iit-term-synthesis $HOME/iit-term-synthesis
+ln -s /dfs/scratch0/brando9/data $HOME/data
+ln -s /afs/cs.stanford.edu/u/brando9/proverbot9001 $HOME/proverbot9001
+
 git clone git@github.com:FormalML/iit-term-synthesis.git
 git clone git@github.com:brando90/ultimate-utils.git
 git clone git@github.com:brando90/pycoq.git

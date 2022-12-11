@@ -1,8 +1,8 @@
 # FROM --platform=linux/amd64 continuumio/miniconda3
-#FROM ubuntu:20.04
+FROM ubuntu:20.04
 #FROM ubuntu:18.04
 FROM continuumio/miniconda3
-#FROM ocaml/opam:latest
+FROM ocaml/opam:latest
 FROM ruby:3.1.2
 
 MAINTAINER Brando Miranda "brandojazz@gmail.com"
@@ -63,6 +63,30 @@ RUN opam pin add -y coq 8.11.0
 RUN opam install -y coq-serapi
 
 RUN eval $(opam env)
+
+#opam switch create coq-8.10 4.07.1
+#eval $(opam env --switch=coq-8.10 --set-switch)
+#opam pin add -y coq 8.10.2
+#
+#opam switch create coq-8.12 4.07.1
+#eval $(opam env --switch=coq-8.12 --set-switch)
+#opam pin add -y coq 8.12.2
+
+# todo, one idea is to copy proverbot (or move everything to pycoq), build it with the bellow pycoq files by moving it temp
+# todo, then removing temp but everything has been installed, the deps, then at init of container the proverbot9001/pycoq
+# todo, in local can with volume can be set up with pycoq's install deps
+#RUN mkdir -p ~$HOME/tmp/
+#RUN git clone git@github.com:FormalML/iit-term-synthesis.git
+#git clone git@github.com:brando90/ultimate-utils.git
+#git clone git@github.com:brando90/pycoq.git
+#git clone git@github.com:brando90/proverbot9001.git
+
+# - TODO, how to make it work without the volume? could also put sourcing it in bashrc
+# - TODO copy that file and do it, but we also need to copy prover both
+# - todo avoid copy the command one by one and put run in front imho
+RUN pycoq_install_coqgym_deps.sh
+
+# - todo, maybe then remove the tmp folder? leave it, let container merge them?...
 
 #
 RUN pip3 install --upgrade pip

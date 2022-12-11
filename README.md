@@ -92,7 +92,33 @@ docker login
 docker push brandojazz/iit-term-synthesis:test
 docker images
 ```
-to verify the setup and test of pycoq in docker container on linux
+
+run container
+```bash
+#docker pull  brandojazz/iit-term-synthesis:test
+
+docker run --platform linux/amd64 \
+            -v /Users/brandomiranda/iit-term-synthesis:/home/bot/iit-term-synthesis \
+           -v /Users/brandomiranda/pycoq:/home/bot/pycoq \
+           -v /Users/brandomiranda/ultimate-utils:/home/bot/ultimate-utils \
+           -v /Users/brandomiranda/proverbot9001:/home/bot/proverbot9001 \
+           -v /Users/brandomiranda/data:/home/bot/data \
+           -ti brandojazz/iit-term-synthesis:test bash
+           
+docker run -v /Users/brandomiranda/iit-term-synthesis:/home/bot/iit-term-synthesis \
+           -v /Users/brandomiranda/pycoq:/home/bot/pycoq \
+           -v /Users/brandomiranda/ultimate-utils:/home/bot/ultimate-utils \
+           -v /Users/brandomiranda/proverbot9001:/home/bot/proverbot9001 \
+           -v /Users/brandomiranda/data:/home/bot/data \
+           -ti brandojazz/iit-term-synthesis:test_arm bash
+           
+docker run -v /Users/brandomiranda/iit-term-synthesis:/home/bot/iit-term-synthesis \
+           -v /Users/brandomiranda/pycoq:/home/bot/pycoq \
+           -v /Users/brandomiranda/ultimate-utils:/home/bot/ultimate-utils \
+           -v /Users/brandomiranda/proverbot9001:/home/bot/proverbot9001 \
+           -v /Users/brandomiranda/data:/home/bot/data \
+           -ti ocaml/opam bash
+```
 
 ## Strace in Apple devices
 
