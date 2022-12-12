@@ -144,6 +144,11 @@ async def loop_through_files():
                     raise Exception(coq_exc)
 
 
+def clean_up_filename(filename: str, replace_dtr: str = '') -> str:
+    filename = filename.replace('._pycoq_context', replace_dtr)
+    return filename
+
+
 if __name__ == '__main__':
     asyncio.run(loop_through_files_original())
     asyncio.run(loop_through_files())

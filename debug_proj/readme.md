@@ -5,12 +5,15 @@ coq utitlites documentation https://coq.inria.fr/refman/practical-tools/utilitie
 
 ## Install
 
+Actually just run make...
+[
 To build this coq project first have coq build the `CoqMakefile` for you (that you will not usually touch):
 ```bash
 coq_makefile -f _CoqProject -o CoqMakefile
 ```
 this automatically generates a make file make file named `CoqMakefile` that you will not usually edit.
 The make file I am managing is the `Makefile` file.
+]
 
 Now we can build our project with:
 ```bash
