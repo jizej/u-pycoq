@@ -640,58 +640,14 @@ def strace_build_coq_project_and_get_filenames(coq_proj: CoqProj,
     # - get list of coq files from coq project
     regex: str = pycoq.pycoq_trace_config.REGEX if regex_to_get_filenames is None else regex_to_get_filenames
     filenames: str = []
+    # keep building and stracing until success i.e. filenames is none empty.
     if len(filenames) == 0:
         # try to build it with VPs opam reinstall
-        filenames: list[str] = strace_build_with_opam_reinstall()
+        filenames: list[str] = strace_build_with_opam_reinstall(switch, coq_proj, regex)
     if len(filenames) == 0:
-        # - else build with the the coq-projs make file
-        filenames: list[str] = strace_build_with_make_clean()
+        # else build with the the coq-projs make file
+        filenames: list[str] = strace_build_with_make_clean(switch, coq_proj, regex)
     return filenames
-
-
-def _strace_build_coq_project_and_get_filenames(switch: str,
-                                                coq_package: str,
-                                                coq_package_pin: str,
-                                                regex_to_get_filenames: Optional[str] = None,
-                                                ) -> list[str]:
-    """
-    Get the list of coq file names by tracing the build command for the coq project.
-
-    Main insight on how pycoq & strace get the list of files & install the project:
-        pycoq uses strace to check list of coq filenames after coq project was installed
-        (e.g. with coq, make, or the coq pkg/proj original install method).
-        So perhaps we just need to make sure we know how to install project.
-    todo: install depends here too some day.
-    """
-    # if VPs way failed then try to do it with make todo can the bellow be done only with coq coq_package, also its own function
-    if filenames == []:
-        command: str = ['make', 'clean', '-C', coq_package_pin]
-        res = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        logging.info(f"{command}: {res.stdout.decode()} {res.stderr.decode()}")
-
-        command: str = ['make', '-C', coq_package_pin]
-        logging.info(f"{executable}, {regex}, {workdir}, {command}")
-        logging.info(f"{executable}, {regex}, {workdir}, {' '.join(command)}")
-        print(f"{executable}, {regex}, {workdir}, {command}")
-        print(f"{executable}, {regex}, {workdir}, {' '.join(command)}")
-        print(f'{strace_logdir=}')
-        strace_logdir = pycoq.config.get_strace_logdir()
-
-        filenames = pycoq.trace.strace_build(executable, regex, workdir, command, strace_logdir)
-    return filenames
-
-
-def check_switch_has_coqc_and_return_path_2_coqc_excutable(switch: str) -> str:
-    """
-    executable='/dfs/scratch0/brando9/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc'
-    """
-    executable: str = opam_executable('coqc', switch)
-    if executable is None:
-        logging.critical(f"coqc executable is not found in {switch}")
-        raise Exception(f'Coqc was not installed in {switch=}, trying installing coq?')
-    else:
-        logging.info(f'-> coqc was found! :) {executable=}')
-    return executable
 
 
 def strace_build_with_opam_reinstall(switch: str, coq_proj: CoqProj, regex: str, workdir: Optional = None):
@@ -729,6 +685,9 @@ def strace_build_with_make_clean(switch: str, coq_proj: CoqProj, regex: str, wor
     """
         (iit_synthesis) brando9/afs/cs.stanford.edu/u/brando9/proverbot9001/coq-projects/CompCert $ source make.sh
         make clean -C ~/proverbot9001/coq-projects/CompCert
+
+    todo: to deal with .remake, just use the given build without .configure and put the path to remake at the end,
+    might need to "parse" the build command for this to work.
     """
     logging.info(f'{strace_build_with_make_clean=}')
     if switch != coq_proj.switch:
@@ -747,18 +706,27 @@ def strace_build_with_make_clean(switch: str, coq_proj: CoqProj, regex: str, wor
     logging.info(f'{strace_build_with_opam_reinstall=}')
 
     # - build with make clean -C and strace it
+    # e.g. executable='/dfs/scratch0/brando9/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc'
     executable: str = check_switch_has_coqc_and_return_path_2_coqc_excutable(switch)
-    # command: list = ['make', 'clean', '-C', coq_proj_path]
-    # res = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    # logging.info(f"{command}: {res.stdout.decode()} {res.stderr.decode()}")
-
     command: list = ['make', '-C', coq_proj_path]
     logging.info(f"{executable}, {regex}, {workdir}, {command}")
     logging.info(f"{executable}, {regex}, {workdir}, {' '.join(command)}")
     strace_logdir = pycoq.config.get_strace_logdir()
-
-    filenames = pycoq.trace.strace_build(executable, regex, workdir, command, strace_logdir)
+    filenames: list[str] = pycoq.trace.strace_build(executable, regex, workdir, command, strace_logdir)
     return filenames
+
+
+def check_switch_has_coqc_and_return_path_2_coqc_excutable(switch: str) -> str:
+    """
+    executable='/dfs/scratch0/brando9/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc'
+    """
+    executable: str = opam_executable('coqc', switch)
+    if executable is None:
+        logging.critical(f"coqc executable is not found in {switch}")
+        raise Exception(f'Coqc was not installed in {switch=}, trying installing coq?')
+    else:
+        logging.info(f'-> coqc was found! :) {executable=}')
+    return executable
 
 
 # - tests
