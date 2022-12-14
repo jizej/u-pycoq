@@ -856,6 +856,7 @@ source make.sh
     strace_logdir = pycoq.config.get_strace_logdir()
     logging.info(f"{executable}, {regex}, {workdir}, {command} {strace_logdir}")
     filenames: list[str] = pycoq.trace.strace_build(executable, regex, workdir, command.split(), strace_logdir)
+    logging.info(f'{filenames=}')
     return filenames
 
 
