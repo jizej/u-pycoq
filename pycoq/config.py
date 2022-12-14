@@ -7,6 +7,7 @@ todo:
 
 # needs refactoring work with using dataclass for the config file and validation
 # see https://tech.preferred.jp/en/blog/working-with-configuration-in-python/
+import logging
 from pathlib import Path
 
 from typing import Dict, Union, Optional
@@ -126,11 +127,14 @@ def touch_file(path2file: str):
 #     from pprint import pprint
 #     pprint(pycoq_config)
 
-def clear_pycoq_logging_file(pycoq_logfile_name: Optional[Union[str, Path]] = None):
+def clear_pycoq_logging_file(pycoq_logfile_name: Optional[Union[str, Path]] = None) -> Path:
     """
     Clears the contents of the logging file that pycoq sets up for the logging module for your python scripts.
+    Also returns the pycoq log filename/path.
     """
     from uutils import clear_file_contents
-    if pycoq_logfile_name is not None:
+    if pycoq_logfile_name is None:
         pycoq_logfile_name: Path = Path(DEFAULT_CONFIG['log_filename']).expanduser()
     clear_file_contents(pycoq_logfile_name)
+    logging.info(f'{pycoq_logfile_name=}')
+    return pycoq_logfile_name

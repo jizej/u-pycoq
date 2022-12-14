@@ -4,7 +4,7 @@ functions to work with opam
 Opam terms:
 opam pin/pinning = ... why do we need this? difference with opam install?
 '''
-
+import sys
 from typing import Optional, List, Tuple
 
 import subprocess
@@ -231,22 +231,23 @@ def opam_pin_package(coq_package: str,
         logging.info(f'{res.stdout.decode=}')
         logging.info(f'{res.stderr.decode=}')
         return True
-    # except subprocess.CalledProcessError as error:
-    #     logging.critical(f"{command} returned {error.returncode}: {error.stdout.decode()} | {error.stderr.decode()}")
-    #     return False
-    except Exception as e:
-        logging.info(f"Attempt from VP didn't work so we are going to try make, VPs error was: {e=}")
-        logging.info('-> Going to try make instead')
-
-        command: list = ['make', '-C', coq_package_pin]
-        logging.info(f"-> command={' '.join(command)}")
-
-        res = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        logging.info(f"-> command=[{' '.join(command)}]")
-        logging.info(f'{res.stdout.decode=}')
-        logging.info(f'{res.stderr.decode=}')
-        return True
+    except subprocess.CalledProcessError as error:
+        logging.critical(f"{command} returned {error.returncode}: {error.stdout.decode()} | {error.stderr.decode()}")
+        return False
+    # I think bellow is a replacement for opam reinstall so it shouldn't go in opam pin...(but we are using our own anyway)
+    # except Exception as e:
+    #     logging.info(f"Attempt from VP didn't work so we are going to try make, VPs error was: {e=}")
+    #     logging.info('-> Going to try make instead')
+    #
+    #     command: list = ['make', '-C', coq_package_pin]
+    #     logging.info(f"-> command={' '.join(command)}")
+    #
+    #     res = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    #
+    #     logging.info(f"-> command=[{' '.join(command)}]")
+    #     logging.info(f'{res.stdout.decode=}')
+    #     logging.info(f'{res.stderr.decode=}')
+    #     return True
 
 
 def opam_pin_proj():
@@ -692,6 +693,7 @@ def strace_build_coq_project_and_get_filenames(coq_proj: CoqProj,
     logging.info(f'{root_option()=}')
 
     # - use switch corresponding to the coq proj
+    logging.info(f'{coq_proj=}')
     switch: str = coq_proj.switch  # e.g. coq-8.10
     coq_project_name: str = coq_proj.project_name  # e.g. CompCert
     coq_project_path: str = coq_proj.get_coq_proj_path()  # e.g. ~/proverbot9001/coq-projects/
@@ -702,30 +704,37 @@ def strace_build_coq_project_and_get_filenames(coq_proj: CoqProj,
     logging.info(f'{build_command=}')
 
     # - activate opam switch for coq project
-    activate_opam_switch(switch)
+    # activate_opam_switch(switch)
+    opam_set_switch(switch)
 
     # -- get list of coq files from coq project
     # - since we are in the code that build the coq proj & gets list of filename pycoq contexts, we need to opam pin https://stackoverflow.com/questions/74777579/is-opam-pin-project-needed-when-one-wants-to-install-a-opam-project-with-opam-re
-    pin_coq_project(switch, coq_project_name, coq_project_path)
+    # pin_coq_project(switch, coq_project_name, coq_project_path)  # todo double check
+
     # - keep building & stracing until success i.e. filenames is none empty.
     regex: str = pycoq.pycoq_trace_config.REGEX if regex_to_get_filenames is None else regex_to_get_filenames
     logging.info(f'{regex=}')
-    filenames: str = []
+    filenames: list[str] = []
+    # if len(filenames) == 0:
+    #     # else build with the coq-projs make file
+    #     filenames: list[str] = strace_build_with_make_clean(switch, coq_project_name, coq_project_path, regex)
+    # if len(filenames) == 0:
+    #     # try to build it with VPs opam reinstall
+    #     # filenames: list[str] = strace_build_opam_reinstall_opam_pin(switch, coq_project_name, coq_project_path, regex)
+    #     filenames: list[str] = strace_build_opam_reinstall(switch, coq_project_path, regex)
     if len(filenames) == 0:
-        # try to build it with VPs opam reinstall
-        filenames: list[str] = strace_build_with_opam_reinstall(switch, coq_proj, regex)
-    if len(filenames) == 0:
-        # else build with the coq-projs make file
-        filenames: list[str] = strace_build_with_make_clean(switch, coq_proj, regex)
+        # else use build command
+        filenames: list[str] = strace_build_with_build_command(switch, coq_project_name, coq_project_path,
+                                                               build_command, regex)
     return filenames
 
 
-def strace_build_with_opam_reinstall(switch: str,
-                                     coq_project_name: str,
-                                     coq_project_path: str,
-                                     regex: str,
-                                     workdir: Optional = None,
-                                     ):
+def strace_build_opam_reinstall_opam_pin(switch: str,
+                                         coq_project_name: str,
+                                         coq_project_path: str,
+                                         regex: str,
+                                         workdir: Optional = None,
+                                         ):
     """
     opam reinstall --yes --switch ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1 --keep-build-dir lf
 
@@ -733,11 +742,16 @@ def strace_build_with_opam_reinstall(switch: str,
         - since I learned that opam pin ... works for local customizations of projs (which it seems we need to mine data
         or at least idk how to mine data using the "official" version from the authors, perhaps this way is better since
         we force reproducibility of the version of the data set we train with).
-        Thus, this ref/Q is irrelevant: https://discuss.ocaml.org/t/how-does-one-reinstall-an-opam-package-proj-using-the-absolute-path-to-the-project/10944
+        Thus, this ref: https://discuss.ocaml.org/t/how-does-one-reinstall-an-opam-package-proj-using-the-absolute-path-to-the-project/10944
+        - hypothesis: opam install is needed just like make clean -C is needed, we need to force opam to recompile so
+        that strace can get us the files we need.
+            - alternatively, re-write strace & instead loop through the compiled files in coq-proj & create the right
+            pycoq context. Not effortless! Avoid!
     """
-    logging.info(f'{strace_build_with_opam_reinstall=}')
+    logging.info(f'{strace_build_opam_reinstall_opam_pin=}')
     # - activate switch
-    activate_opam_switch(switch)
+    # activate_opam_switch(switch)
+    opam_set_switch(switch)
 
     # - pins opam proj ref: https://discuss.ocaml.org/t/what-is-the-difference-between-opam-pin-and-opam-install-when-to-use-one-vs-the-other/10942/3
     pin_coq_project(switch, coq_project_name, coq_project_path)
@@ -746,7 +760,10 @@ def strace_build_with_opam_reinstall(switch: str,
     executable: str = check_switch_has_coqc_and_return_path_2_coqc_excutable(switch)
 
     # - execute opam reinstall and strace it to get pycoq context filenames
-    command: str = f'opam reinstall {root_option()} --yes --switch {switch} --keep-build-dir {coq_project_name}'
+    # command: str = f'opam reinstall {root_option()} --yes --switch {switch} --keep-build-dir {coq_project_name}'
+    # command: str = f'opam reinstall {root_option()} --yes --switch {switch} --keep-build-dir {coq_project_name}'
+    command = ''  # todo change above to list
+    # need to change the above to list
     strace_logdir = pycoq.config.get_strace_logdir()
     logging.info(f"{executable}, {regex}, {workdir}, {command} {strace_logdir}")
     filenames: list[str] = pycoq.trace.strace_build(executable, regex, workdir, command.split(), strace_logdir)
@@ -775,21 +792,119 @@ def strace_build_with_make_clean(switch: str,
     todo: to deal with .remake, just use the given build without .configure and put the path to remake at the end,
     todo: might need to "parse" the build command for this to work, check other todo for build command
     """
+    raise NotImplementedError
     logging.info(f'{strace_build_with_make_clean=}')
     # - activate switch
-    activate_opam_switch(switch)
+    # activate_opam_switch(switch)
+    opam_set_switch(switch)
 
     # - pins opam proj ref: https://discuss.ocaml.org/t/what-is-the-difference-between-opam-pin-and-opam-install-when-to-use-one-vs-the-other/10942/3
-    pin_coq_project(switch, coq_project_name, coq_project_path)
+    # pin_coq_project(switch, coq_project_name, coq_project_path)
 
     # - get coqc executable='/dfs/scratch0/brando9/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc'
     executable: str = check_switch_has_coqc_and_return_path_2_coqc_excutable(switch)
 
     # - build with make clean -C and strace it
     command: str = f'make clean -C {coq_project_path}'
+    logging.info(f'{command=}')
+    st()
     strace_logdir = pycoq.config.get_strace_logdir()
     logging.info(f"{executable}, {regex}, {workdir}, {command} {strace_logdir}")
     filenames: list[str] = pycoq.trace.strace_build(executable, regex, workdir, command.split(), strace_logdir)
+    return filenames
+
+
+def strace_build_with_build_command(switch: str,
+                                    coq_project_name: str,
+                                    coq_project_path: str,
+                                    build_command: str,
+                                    regex: str,
+                                    workdir: Optional = None,
+                                    ) -> list[str]:
+    """
+cd /lfs/ampere4/0/brando9/proverbot9001/coq-projects/CompCert/
+source make.sh
+
+    ref:
+        - https://stackoverflow.com/questions/28054448/specifying-path-to-makefile-using-make-command#:~:text=You%20can%20use%20the%20%2DC,a%20name%20other%20than%20makefile%20.
+    """
+    logging.info(f'{strace_build_with_build_command=}')
+    # logging.info(f'{coq_project_path=}')
+    # coq_project_path: str = os.path.realpath(coq_project_path)
+    logging.info(f'{coq_project_path=}')
+    logging.info(f'{build_command=} (ran inside path2coqproj/main.sh')
+    # - activate switch
+    # activate_opam_switch(switch)
+    opam_set_switch(switch)
+
+    # - pins opam proj ref: https://discuss.ocaml.org/t/what-is-the-difference-between-opam-pin-and-opam-install-when-to-use-one-vs-the-other/10942/3
+    # pin_coq_project(switch, coq_project_name, coq_project_path)  # not needed
+
+    # - get coqc executable='/dfs/scratch0/brando9/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc'
+    executable: str = check_switch_has_coqc_and_return_path_2_coqc_excutable(switch)
+
+    # - build with make clean -C and strace it
+    logging.info(f'{os.getcwd()=}')
+    logging.info(f'{coq_project_path=}')
+    os.chdir(coq_project_path)
+    logging.info(f'{os.getcwd()=}')
+    workdir = coq_project_path
+    logging.info(f'{workdir=}')
+    # command: str = f'source {coq_project_path}/main.sh {coq_project_path}'
+    command: str = 'sh make.sh'
+    logging.info(f'{command=}')
+    strace_logdir = pycoq.config.get_strace_logdir()
+    logging.info(f"{executable}, {regex}, {workdir}, {command} {strace_logdir}")
+    filenames: list[str] = pycoq.trace.strace_build(executable, regex, workdir, command.split(), strace_logdir)
+    return filenames
+
+
+def strace_build_opam_reinstall(switch: str,
+                                # coq_project_name: str,
+                                coq_project_path: str,
+                                regex: str,
+                                workdir: Optional = None,
+                                ):
+    """
+
+NAME
+       opam-reinstall - Reinstall a list of packages.
+
+SYNOPSIS
+       opam reinstall [OPTION]... [PACKAGES]...
+
+ARGUMENTS
+       PACKAGES
+           List of package names, with an optional version or constraint, e.g
+           `pkg', `pkg.1.0' or `pkg>=0.5' ; or directory names containing
+           package description, with explicit directory (e.g. `./srcdir' or
+           `.')
+
+    note:
+        ref: https://discuss.ocaml.org/t/how-does-one-reinstall-an-opam-package-proj-using-the-absolute-path-to-the-project/10944
+
+    """
+    logging.info(f'{strace_build_opam_reinstall_opam_pin=}')
+    # - activate switch
+    # activate_opam_switch(switch)
+    opam_set_switch(switch)
+
+    # - pins opam proj ref: https://discuss.ocaml.org/t/what-is-the-difference-between-opam-pin-and-opam-install-when-to-use-one-vs-the-other/10942/3
+    # pin_coq_project(switch, coq_project_name, coq_project_path)  # todo: don't think we need this, I really hope
+
+    # - get coqc executable='/dfs/scratch0/brando9/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc'
+    executable: str = check_switch_has_coqc_and_return_path_2_coqc_excutable(switch)
+
+    # - execute opam reinstall and strace it to get pycoq context filenames
+    # command: str = f'opam reinstall {root_option()} --yes --switch {switch} --keep-build-dir {coq_project_name}'
+    # command: str = f'opam reinstall {root_option()} --yes --switch {switch} --keep-build-dir {coq_project_name}'
+    command: list = ['opam'] + ['reinstall'] + root_option() + ['--yes'] + ['--switch', switch] + \
+                    ['--keep-build-dir', coq_project_path] + \
+                    [coq_project_path]
+    strace_logdir = pycoq.config.get_strace_logdir()
+    logging.info(f"{executable}, {regex}, {workdir}, {command} {strace_logdir}")
+    # filenames: list[str] = pycoq.trace.strace_build(executable, regex, workdir, command.split(), strace_logdir)
+    filenames: list[str] = pycoq.trace.strace_build(executable, regex, workdir, command, strace_logdir)
     return filenames
 
 
@@ -822,10 +937,13 @@ def pin_coq_project(switch: str,
     ref:
         - for details on opam pin (and iff with opam install): https://discuss.ocaml.org/t/what-is-the-difference-between-opam-pin-and-opam-install-when-to-use-one-vs-the-other/10942/3
     """
-    command: str = f'opam pin -y {root_option()} --switch {switch} {coq_proj} {coq_proj_path}'
+    # command: str = f'opam pin -y {root_option()} --switch {switch} {coq_proj} {coq_proj_path}'
+    command: list = ['opam'] + ['pin'] + ['-y'] + root_option() + ['--switch'] + [switch] + [coq_proj] + [coq_proj_path]
     logging.info(f"-> {command=}")
+    logging.info(f"-> command={' '.join(command)=}")
     try:
-        res = subprocess.run(command.split(), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # res = subprocess.run(command.split(), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        res = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         logging.info(f'{res.stdout.decode=}')
         logging.info(f'{res.stderr.decode=}')
     except Exception as e:
@@ -844,10 +962,43 @@ def activate_opam_switch(switch: str):
     ref:
         - for what `eval $(opam env)` does: https://stackoverflow.com/questions/30155960/what-is-the-use-of-eval-opam-config-env-or-eval-opam-env-and-their-differen
     """
+    raise NotImplementedError  # see: https://discuss.ocaml.org/t/is-eval-opam-env-switch-switch-set-switch-equivalent-to-opam-switch-set-switch/10957
+    # for now use: opam_set_switch
     command: str = f"eval $(opam env --switch={switch} --set-switch)"
+    res = subprocess.run(command.split(), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    command: str = ["eval", f"$(opam env --switch={switch} --set-switch)"]
+    command: str = 'eval $(opam env)'
     logging.info(f"-> {command=}")
     try:
         res = subprocess.run(command.split(), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # res = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        logging.info(f'{res.stdout.decode=}')
+        logging.info(f'{res.stderr.decode=}')
+    except Exception as e:
+        logging.critical(f'Error: {e=}')
+        raise e
+
+
+def opam_set_switch(switch: str):
+    """
+    Sets the current opam switch.
+
+    (I think it's the same as eval $(opam env --switch={switch} --set-switch) ).
+
+        SYNOPSIS
+               opam switch [OPTION]... [COMMAND] [ARG]...
+
+        set SWITCH
+           Set the currently active switch, among the installed switches.
+
+    ref:
+        - https://discuss.ocaml.org/t/is-eval-opam-env-switch-switch-set-switch-equivalent-to-opam-switch-set-switch/10957
+    """
+    command: str = f'opam switch set {switch}'
+    logging.info(f"-> {command=}")
+    try:
+        res = subprocess.run(command.split(), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # res = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         logging.info(f'{res.stdout.decode=}')
         logging.info(f'{res.stderr.decode=}')
     except Exception as e:

@@ -1,7 +1,6 @@
 [
     {
-        "project_name": "compcert",
-        "switch": "ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1",
+        "project_name": "CompCert",
         "train_files": [
             "./cfrontend/Cshmgen.v",
             "./cfrontend/Initializersproof.v",
@@ -182,6 +181,9 @@
             "./lib/Parmov.v",
             "./lib/Wfsimpl.v",
             "./common/Globalenvs.v"
-        ]
+        ],
+        "switch": "coq-8.10",
+        "build_command": "./configure x86_64-linux && make clean -C",
+        "original_build_command": "./configure x86_64-linux && make"
     }
 ]

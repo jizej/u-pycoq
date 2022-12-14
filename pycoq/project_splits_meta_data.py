@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Union
 
 from pycoq.utils import clean_up_filename
-from uutils import load_json
+from uutils import load_json, merge_two_dicts
 
 
 @dataclass()
@@ -42,7 +42,8 @@ class CoqProj:
     path_2_coq_projs: str
 
     # - other names based on coq-gym
-    build_command: str = ''  # e.g.         "build_command": "./configure.sh && make"
+    build_command: str = ''  # e.g. "build_command": "./configure.sh && make"
+    original_build_command: str = ''  # "build_command": "./configure.sh && make"
     build_partition: str = ''  # e.g.         "build_partition": "long"
 
     # coq_proj_version ... shoould work for the selected coq ver in (opam) switch
@@ -64,7 +65,7 @@ class CoqProj:
         e.g.
             get_coq_proj_path='/dfs/scratch0/brando9/pycoq/pycoq/test/lf'
         """
-        return f"{self.path_2_coq_projs / self.project_name}"
+        return f"{self.path_2_coq_projs}/{self.project_name}"
 
 
 # basically entire benchmark
@@ -89,9 +90,14 @@ def list_dict_splits_2_list_splits(coq_projs: list[dict], path_2_coq_projs: Path
     """
     path_2_coq_projs: Path = path_2_coq_projs.expanduser()
     path_2_coq_projs: str = str(path_2_coq_projs)
+
+    # - loop
+    kwargs: dict = dict(path_2_coq_projs=path_2_coq_projs)
     coq_proj_splits_: list[CoqProj] = []
-    for coq_proj in coq_projs:
-        coq_proj_split: CoqProj = CoqProj(**coq_proj, path_2_coq_projs=path_2_coq_projs)
+    coq_proj_dict: dict
+    for coq_proj_dict in coq_projs:
+        kwargs: dict = merge_two_dicts(kwargs, coq_proj_dict)  # merges by replacing according to 2nd arg
+        coq_proj_split: CoqProj = CoqProj(**kwargs)
         coq_proj_splits_.append(coq_proj_split)
     return coq_proj_splits_
 
@@ -110,7 +116,7 @@ def get_compcert_coq_projs_meta_data() -> CoqProjs:
     """
     # note: the CompCert path sym links to the CompCert in coq_projects
     path_2_coq_projs: Path = Path('~/proverbot9001/coq-projects/').expanduser()  # todo: move to pycoq location
-    path_2_coq_projs_json_splits: Path = Path('~/pycoq/compcert_projs_splits.json').expanduser()
+    path_2_coq_projs_json_splits: Path = Path('~/proverbot9001/compcert_projs_splits.json').expanduser()  # todo: move to pycoq & have it work when you build from pycoq
     coq_projs: list[dict] = load_json(path_2_coq_projs_json_splits)
     logging.info(f'{coq_projs[0].keys()=}')
     coq_projs: list[CoqProj] = list_dict_splits_2_list_splits(coq_projs, path_2_coq_projs)
