@@ -28,7 +28,7 @@ from pdb import set_trace as st
 # refactor globals below to be loaded from a default config
 # see e.g. https://tech.preferred.jp/en/blog/working-with-configuration-in-python/
 from pycoq.common import LocalKernelConfig
-from pycoq.project_splits_meta_data import CoqProj
+from pycoq.project_splits import CoqProj
 
 MIN_OPAM_VERSION = "2."
 DEFAULT_OCAML = "ocaml-variants.4.07.1+flambda"
@@ -724,8 +724,8 @@ def strace_build_coq_project_and_get_filenames(coq_proj: CoqProj,
     #     filenames: list[str] = strace_build_opam_reinstall(switch, coq_project_path, regex)
     if len(filenames) == 0:
         # else use build command
-        filenames: list[str] = strace_build_with_build_command(switch, coq_project_name, coq_project_path,
-                                                               build_command, regex)
+        filenames: list[str] = strace_build_with_make_sh(switch, coq_project_name, coq_project_path,
+                                                         build_command, regex)
     return filenames
 
 
@@ -814,21 +814,24 @@ def strace_build_with_make_clean(switch: str,
     return filenames
 
 
-def strace_build_with_build_command(switch: str,
-                                    coq_project_name: str,
-                                    coq_project_path: str,
-                                    build_command: str,
-                                    regex: str,
-                                    workdir: Optional = None,
-                                    ) -> list[str]:
+def strace_build_with_make_sh(switch: str,
+                              coq_project_name: str,
+                              coq_project_path: str,
+                              build_command: str,
+                              regex: str,
+                              workdir: Optional = None,
+                              ) -> list[str]:
     """
 cd /lfs/ampere4/0/brando9/proverbot9001/coq-projects/CompCert/
 source make.sh
 
+    note:
+        - in coq_proj obj doesn't have build command proverbot9001's build sh script writes a simple make.
+
     ref:
         - https://stackoverflow.com/questions/28054448/specifying-path-to-makefile-using-make-command#:~:text=You%20can%20use%20the%20%2DC,a%20name%20other%20than%20makefile%20.
     """
-    logging.info(f'{strace_build_with_build_command=}')
+    logging.info(f'{strace_build_with_make_sh=}')
     # logging.info(f'{coq_project_path=}')
     # coq_project_path: str = os.path.realpath(coq_project_path)
     logging.info(f'{coq_project_path=}')
@@ -1013,6 +1016,27 @@ def install_denpds_opam_proj():
     Above check if it's true some day.
     """
     raise NotImplementedError
+
+
+def create_entire_pycoq_switch_from_scratch():
+    """
+
+    For a coq proj to work we need:
+    - to create it's switch
+    - it's compiler
+    - coq version
+
+    e.g running in python:
+    opam switch
+    opam switch create coq-8.6.1 4.07.1
+    #opam switch create coq-8.6.1 4.12.0
+    eval $(opam env --switch=coq-8.6.1 --set-switch)
+    opam pin add --update-invariant -y coq 8.6.1
+    opam pin add -y coq 8.6.1
+
+    optionally the --update-invariant forces to use the right compiler if you don't know which one to use.
+    """
+    pass
 
 
 # - tests

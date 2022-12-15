@@ -16,6 +16,7 @@ pycoq/test/autoagent/*.log
 build/
 serlib/
 
+# proverbot9001
 /.gcroots/
 *__pycache__/
 #/CompCert/
