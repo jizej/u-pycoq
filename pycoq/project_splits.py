@@ -27,7 +27,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Union, Optional
 
-from pycoq.opam import opam_set_switch
 from pycoq.utils import clean_up_filename
 from uutils import load_json, merge_two_dicts
 
@@ -107,7 +106,7 @@ def get_debug_projprojs_meta_data() -> CoqProjs:
     pass
 
 
-def get_lf_coq_projs_meta_data() -> CoqProjs:
+def get_lf_coq_projs() -> CoqProjs:
     pass
 
 
@@ -126,12 +125,13 @@ def get_debug_two_coq_projects_train_test() -> CoqProjs:
     coq_projs: list[dict] = load_json(path_2_coq_projs_json_splits)
     logging.info(f'{coq_projs[0].keys()=}')
     coq_projs: list[CoqProj] = list_dict_splits_2_list_splits(coq_projs, path_2_coq_projs)
-    assert len(coq_projs) == 1
-    coq_projs_meta_data: CoqProjs = CoqProjs(path_2_coq_projs=path_2_coq_projs,
-                                             path_2_coq_projs_json_splits=path_2_coq_projs_json_splits,
-                                             coq_projs=coq_projs)
+    coq_projs: CoqProjs = CoqProjs(path_2_coq_projs=path_2_coq_projs,
+                                   path_2_coq_projs_json_splits=path_2_coq_projs_json_splits,
+                                   coq_projs=coq_projs)
+    return coq_projs
 
-def get_compcert_coq_projs_meta_data() -> CoqProjs:
+
+def get_compcert_coq_projs() -> CoqProjs:
     """
     Get data set coq projs info (i.e. meta data) e.g. path2 coq-proj
     """
@@ -143,13 +143,13 @@ def get_compcert_coq_projs_meta_data() -> CoqProjs:
     logging.info(f'{coq_projs[0].keys()=}')
     coq_projs: list[CoqProj] = list_dict_splits_2_list_splits(coq_projs, path_2_coq_projs)
     assert len(coq_projs) == 1
-    coq_projs_meta_data: CoqProjs = CoqProjs(path_2_coq_projs=path_2_coq_projs,
-                                             path_2_coq_projs_json_splits=path_2_coq_projs_json_splits,
-                                             coq_projs=coq_projs)
-    return coq_projs_meta_data
+    coq_projs: CoqProjs = CoqProjs(path_2_coq_projs=path_2_coq_projs,
+                                   path_2_coq_projs_json_splits=path_2_coq_projs_json_splits,
+                                   coq_projs=coq_projs)
+    return coq_projs
 
 
-def get_coqgym_coq_projs_meta_data() -> CoqProjs:
+def get_coqgym_coq_projs() -> CoqProjs:
     pass
 
 
@@ -157,15 +157,15 @@ def get_proj_splits_based_on_name_of_path2data(path2data: Union[Path, str]) -> C
     # expanduser(path2data)
     name_path2data: str = str(path2data)
     if 'pycoq_lf_debug' in name_path2data:
-        data_set_meta_data: CoqProjs = get_lf_coq_projs_meta_data()
+        data_set_meta_data: CoqProjs = get_lf_coq_projs()
     elif 'debug_proj' in name_path2data:
         data_set_meta_data: CoqProjs = get_debug_projprojs_meta_data()
     if 'debug_two_coq_projects_train_test' in name_path2data:
-            data_set_meta_data: CoqProjs = get_lf_coq_projs_meta_data()
+        data_set_meta_data: CoqProjs = get_debug_two_coq_projects_train_test()
     elif 'compcert' in name_path2data:
-        data_set_meta_data: CoqProjs = get_compcert_coq_projs_meta_data()
+        data_set_meta_data: CoqProjs = get_compcert_coq_projs()
     elif 'coqgym' in name_path2data:
-        data_set_meta_data: CoqProjs = get_coqgym_coq_projs_meta_data()
+        data_set_meta_data: CoqProjs = get_coqgym_coq_projs()
     else:
         raise ValueError(f'Invalid type of data set/benchmark, got (invalid): {name_path2data=}')
     return data_set_meta_data
@@ -193,6 +193,7 @@ def create_official_makefiles_for_coq_proj_from_path_2_original_coq_repo(
     todo: should be split by project or by train, test files? project doesn't need us to worry about topolical sort.
         Tests a harder gen. Let's do this + it's simpler.
     """
+    from pycoq.opam import opam_set_switch
     # -- optionally set switch or create entire switch from scratch
     if switch_2_set_from_premade:
         # move to a switch you already made
