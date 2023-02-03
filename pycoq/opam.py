@@ -1002,7 +1002,7 @@ Tries to run through opam exec command arg https://opam.ocaml.org/doc/man/opam-e
     # command: str = f'eval {cmd_sub_output}'  # doesn't seem possible https://stackoverflow.com/questions/53950225/python-check-output-call-to-eval-with-arguments-fails
     command: list[str] = f'opam exec --switch {switch}'.split()
     # command: list[str] = command + cmd_sub_output.split()
-    command: list[str] = command + [cmd_sub_output]
+    command: list[str] = command + ['sh'] + [cmd_sub_output]
     logging.info(f"-> {command=}")
     try:
         # res = subprocess.run(command.split(), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

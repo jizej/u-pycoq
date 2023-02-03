@@ -27,6 +27,7 @@ ANSWER_PATTERN_OBJLIST = re.compile(r"\(Answer\s(\d+)(\(ObjList.*\))\)")
 ADDED_PATTERN = re.compile(r"\(Added\s(\d+)(.*)\)")
 COQEXN_PATTERN = re.compile(r"\((CoqExn\(.*\))\)")
 
+
 # from pycoq.query_goals import SerapiGoals
 
 
@@ -137,7 +138,6 @@ class CoqSerapi():
         # import serlib.parser
         # self.parser = serlib.parser.SExpParser()
         self._queried_local_ctx_and_goals = []
-
 
     async def start(self):
         """ starts new kernel if not already connected
@@ -317,7 +317,7 @@ class CoqSerapi():
     #     ann = serlib.cparser.annotate(post_fix)
     #     ret_serapi_goals: SerapiGoals = pycoq.query_goals.parse_serapi_goals(self.parser, post_fix, ann, pycoq.query_goals.SExpr)
     #     return ret_serapi_goals
-        # return pycoq.query_goals.parse_serapi_goals(self.parser, post_fix, ann, pycoq.query_goals.SExpr)
+    # return pycoq.query_goals.parse_serapi_goals(self.parser, post_fix, ann, pycoq.query_goals.SExpr)
 
     async def query_local_ctx_and_goals(self) -> Union[str, list]:
         """
@@ -867,11 +867,12 @@ Displays all open goals / existential variables in the current proof along with 
             "" -> []
         """
         if self._queried_local_ctx_and_goals == []:
-            raise Exception(f'To use top_thm_close() proof you need to make sure you run the execute(ctmt, coq) function'
-                            f'to populate the coq._queried_local_ctx_and_goals fiedl. '
-                            f'Right now it looks empty: \n{self._queried_local_ctx_and_goals=}'
-                            f'\ncurrent coq object is: {self=}'
-                            f'\nwith fields: {vars(self)=}')
+            raise Exception(
+                f'To use top_thm_close() proof you need to make sure you run the execute(ctmt, coq) function'
+                f'to populate the coq._queried_local_ctx_and_goals fiedl. '
+                f'Right now it looks empty: \n{self._queried_local_ctx_and_goals=}'
+                f'\ncurrent coq object is: {self=}'
+                f'\nwith fields: {vars(self)=}')
         # - is top thm closed?
         if len(self._queried_local_ctx_and_goals) <= 2:
             return False
