@@ -132,3 +132,14 @@ ref/credit: https://stackoverflow.com/questions/73724074/how-to-call-an-equivale
 ## Building data sets
 
 TODO
+
+## Current Citation
+
+```
+@software{brando2021ultimatepycoq,
+    author={Brando Miranda},
+    title={Ultimate PyCoq - the Ultimate interface to interact with Coq in Python},
+    url={https://github.com/brando90/pycoq},
+    year={2022}
+}
+```
