@@ -144,152 +144,35 @@ def get_compcert_coq_projs() -> CoqProjs:
     """
     Get data set coq projs info (i.e. meta data) e.g. path2 coq-proj
     """
-    # note: the CompCert path sym links to the CompCert in coq_projects
-    path_2_coq_projs: Path = Path('~/proverbot9001/coq-projects/').expanduser()  # todo: move to pycoq location
-    path_2_coq_projs_json_splits: Path = Path(
-        '~/proverbot9001/compcert_projs_splits.json').expanduser()  # todo: move to pycoq & have it work when you build from pycoq
+    # # note: the CompCert path sym links to the CompCert in coq_projects
+    # path_2_coq_projs: Path = Path('~/proverbot9001/coq-projects/').expanduser()
+    # path_2_coq_projs_json_splits: Path = Path('~/proverbot9001/compcert_projs_splits.json').expanduser()
+    # coq_projs: list[dict] = load_json(path_2_coq_projs_json_splits)
+    # logging.info(f'{coq_projs[0].keys()=}')
+    # coq_projs: list[CoqProj] = list_dict_splits_2_list_splits(coq_projs, path_2_coq_projs)
+    # assert len(coq_projs) == 1
+    # coq_projs: CoqProjs = CoqProjs(path_2_coq_projs=path_2_coq_projs,
+    #                                path_2_coq_projs_json_splits=path_2_coq_projs_json_splits,
+    #                                coq_projs=coq_projs)
+    # return coq_projs
+    raise NotImplementedError
+
+
+def get_coqgym_coq_projs(num_current_coqgym_projs: int = 124) -> CoqProjs:
+    path_2_coq_projs: Path = Path('~/proverbot9001/coqgym/').expanduser()
+    print(f'{path_2_coq_projs=}')
+    path_2_coq_projs_json_splits: Path = Path('~/proverbot9001/coqgym_projs_splits.json').expanduser()
+    print(f'{path_2_coq_projs_json_splits=}')
     coq_projs: list[dict] = load_json(path_2_coq_projs_json_splits)
     logging.info(f'{coq_projs[0].keys()=}')
     coq_projs: list[CoqProj] = list_dict_splits_2_list_splits(coq_projs, path_2_coq_projs)
-    assert len(coq_projs) == 1
+    assert len(coq_projs) == 124, f'Expected:\n{num_current_coqgym_projs} but got\n{len(coq_projs)=},' \
+                                  f'if you changed this you either need to remove the default value currently being' \
+                                  f'used or update the default value.'
     coq_projs: CoqProjs = CoqProjs(path_2_coq_projs=path_2_coq_projs,
                                    path_2_coq_projs_json_splits=path_2_coq_projs_json_splits,
                                    coq_projs=coq_projs)
     return coq_projs
-
-
-def get_coqgym_coq_projs() -> CoqProjs:
-    pass
-
-
-# - coq proj splits generation
-
-def create_official_makefiles_for_coq_proj_from_path_2_original_coq_repo(
-        path2MakeFile: str = '~/pycoq/debug_proj/MakeFile',
-        switch_2_set_from_premade: Optional[str] = None
-):
-    """
-    todo: plan https://github.com/brando90/pycoq/issues/11
-    Create a coq
-
-    - copy the default MakeFile from debug_proj, all coq projs use that version
-    - now loop through the opam src proj path give & append the file names to _CoqProject. This is needed for the
-    MakeFile form the previous step to work.
-    - then the project should be ready to be make with make clean. Make sure to cd to that repo within python
-    (this is optional since it can take time but useful to do to double check your setup works)
-
-    note:
-        - this assumes you've already set up your opam switch & coq install already outside
-        - if note you optionally specify the switch, compiler & coq version you proj needs
-    todo: should be split by project or by train, test files? project doesn't need us to worry about topolical sort.
-        Tests a harder gen. Let's do this + it's simpler.
-    """
-    from pycoq.opam import opam_set_switch
-    # -- optionally set switch or create entire switch from scratch
-    if switch_2_set_from_premade:
-        # move to a switch you already made
-        opam_set_switch(switch_2_set_from_premade)
-    else:
-        raise ValueError('Not implemented but idea is to create entire switch using'
-                         'in pycoqs opam function create_entire_pycoq_switch_from_scratch')
-
-    # -- copy debug proj MakeFile to new project
-    pass
-
-    # -- make _CoqProject if not there, loop through foles * add *.v$ files and the coqc args
-    # flags for coqc, path where folder is and stuff is ran from and name of project/Module
-    # -Q.Debug_Proj
-    # -arg
-    # "-w all"
-    # pycoq's lf uses
-    # -Q.LF
-    pass
-
-    # - test if install worked by make clean project, cd into it
-    pass
-
-
-def create_splits_for_json_files_from_coq_proj(path2coq_proj: str,
-                                               path2save: Path,
-                                               splits_json_filename: str,
-                                               switch: str,
-                                               split_ratio: tuple = (0.9, 0.1),
-                                               ):
-    """
-
-
-    note:
-        - based on first result in google search: In general, putting 80% of the data in the training set, 10% in the validation set, and 10% in the test set is a good split to start with.
-        - you have to process the train files if you want a val set. Usually 0.8:0.1:0.1 is done
-            - have some code that give 0.9:0.1 does that split for you somewhere in uutils
-        - splits created randomly, no dag awareness, that's how coq gym did it anyway: https://github.com/princeton-vl/CoqGym/discussions/79
-        - actually inspecting more carefully, proverbot9001 splits seem that entire coq repos are either at train
-        or at test. Except for only compcert on it's own not in coq-gym.
-
-    """
-    pass
-    # -- loop through all *.v% recursively (nothing in end in filename) then put that in some split
-    # - collect all in their own train test lists
-    # - split (approx) according to ratio
-    # - save new json proj
-
-
-def pycoq_build_coq_project():
-    """
-```bash
-for project in $(jq -r '.[].project_name' compcert_projs_splits.json); do
-    echo $project
-
-    echo "#!/usr/bin/env bash" > coq-projects/$project/make.sh
-    echo ${INIT_CMD} >> coq-projects/$project/make.sh
-    if $(jq -e ".[] | select(.project_name == \"$project\") | has(\"build_command\")" \
-         coqgym_projs_splits.json); then
-        BUILD=$(jq -r ".[] | select(.project_name == \"$project\") | .build_command" \
-                   coqgym_projs_splits.json)
-    else
-        BUILD="make"
-    fi
-
-    SWITCH=$(jq -r ".[] | select(.project_name == \"$project\") | .switch" coqgym_projs_splits.json)
-
-    # why not just call opam switch? or `opam switch set {$SWITCH}`
-    echo "eval \"$(opam env --set-switch --switch=$SWITCH)\"" >> coq-projects/$project/make.sh
-
-    echo "$BUILD $@" >> coq-projects/$project/make.sh
-```
-
-    main idea:
-        - it makes a make.sh file that builds the project according to the stored build command in the json file
-        - seems you can't infer it from the coq-project path, it's hardcoded in the json splits manually todo improve
-        - but if the build_command isn't there then they use just use make. Though note that
-            `./configure x86_64-linux && make` seems common too.
-    """
-    pass
-
-
-def create_new_splits_for_json_files_from_premake_coq_project_splits(coq_proj_2_target: str,
-                                                                     path2save: str,
-                                                                     splits_prefix: str,  # prefix for splits.json file
-                                                                     splits_json_filename: Optional[str] = None,
-                                                                     split_ratio: tuple = (0.9, 0.1),
-                                                                     ):
-    """
-    note:
-        - recommended:
-            splits_json_filename: str = f'{splits_prefix}_projs_splits.json'
-    """
-    pass
-    splits_json_filename: str = f'{splits_prefix}_projs_splits.json' if splits_json_filename is None else splits_json_filename
-    # - loop through all *.v%  (first merge train, test though usually proverbot's train or test is empty)
-    # - seperate all in their own train test lists
-    # - split (approx) according to ratio
-    # - save new json proj, use the original defaults, switch, build_command (if present) etc. would be nice to say
-    # which coq version coq project depends on since this has to be stored somewhere since we are using a local version
-    # local version needed because we are extracting data from it using strace & coqc, idk if data can be extracted
-    # from the remote version
-
-
-# -
 
 
 def get_proj_splits_based_on_name_of_path2data(path2data: Union[Path, str]) -> CoqProjs:
@@ -310,17 +193,19 @@ def get_proj_splits_based_on_name_of_path2data(path2data: Union[Path, str]) -> C
     return coq_projs
 
 
-# - tests
+# - examples, tutorial, tests, etc
 
 def generate_sf_lf_from_soln_repo():
     # create_official_makefiles_for_coq_proj_from_path_2_original_coq_repo()
     pass
 
 
+# - run main etc
+
 if __name__ == '__main__':
     import time
-    from uutils import report_times
 
     start = time.time()
+    print(f'Start! {start=}')
     generate_sf_lf_from_soln_repo
-    print(f"\nSuccess Done!: {report_times(start)}\a")
+    print(f'Done! {time.time() - start=}')

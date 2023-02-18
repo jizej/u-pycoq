@@ -5,6 +5,7 @@ Opam terms:
 opam pin/pinning = ... why do we need this? difference with opam install?
 '''
 import sys
+from pprint import pprint
 from typing import Optional, List, Tuple
 
 import subprocess
@@ -704,8 +705,10 @@ def strace_build_coq_project_and_get_filenames(coq_proj: CoqProj,
     logging.info(f'{build_command=}')
 
     # - activate opam switch for coq project
-    # activate_opam_switch(switch)
-    opam_set_switch(switch)
+    logging.info(f'{switch=}')
+    st()
+    # activate_opam_switch_via_eval(switch)
+    opam_set_switch_via_opam_switch(switch)
 
     # -- get list of coq files from coq project
     # - since we are in the code that build the coq proj & gets list of filename pycoq contexts, we need to opam pin https://stackoverflow.com/questions/74777579/is-opam-pin-project-needed-when-one-wants-to-install-a-opam-project-with-opam-re
@@ -753,8 +756,8 @@ def strace_build_opam_reinstall_opam_pin(switch: str,
     """
     logging.info(f'{strace_build_opam_reinstall_opam_pin=}')
     # - activate switch
-    # activate_opam_switch(switch)
-    opam_set_switch(switch)
+    # activate_opam_switch_via_eval(switch)
+    opam_set_switch_via_opam_switch(switch)
 
     # - pins opam proj ref: https://discuss.ocaml.org/t/what-is-the-difference-between-opam-pin-and-opam-install-when-to-use-one-vs-the-other/10942/3
     pin_coq_project(switch, coq_project_name, coq_project_path)
@@ -797,8 +800,8 @@ def strace_build_with_make_clean(switch: str,
     """
     logging.info(f'{strace_build_with_make_clean=}')
     # - activate switch
-    # activate_opam_switch(switch)
-    opam_set_switch(switch)
+    # activate_opam_switch_via_eval(switch)
+    opam_set_switch_via_opam_switch(switch)
 
     # - pins opam proj ref: https://discuss.ocaml.org/t/what-is-the-difference-between-opam-pin-and-opam-install-when-to-use-one-vs-the-other/10942/3
     # pin_coq_project(switch, coq_project_name, coq_project_path)
@@ -846,8 +849,8 @@ source make.sh
     logging.info(f'{coq_project_path=}')
     logging.info(f'{build_command=} (ran inside path2coqproj/main.sh')
     # - activate switch
-    # activate_opam_switch(switch)
-    opam_set_switch(switch)
+    # activate_opam_switch_via_eval(switch)
+    opam_set_switch_via_opam_switch(switch)
 
     # - pins opam proj ref: https://discuss.ocaml.org/t/what-is-the-difference-between-opam-pin-and-opam-install-when-to-use-one-vs-the-other/10942/3
     # pin_coq_project(switch, coq_project_name, coq_project_path)  # not needed
@@ -916,7 +919,7 @@ def pin_coq_project(switch: str,
         raise e
 
 
-def activate_opam_switch(switch: str):
+def activate_opam_switch_via_eval(switch: str):
     """
     Runs eval $(opam env --switch=switch --set-switch). In PyCoq usually the switch name
     indicates the coq version.
@@ -928,7 +931,7 @@ def activate_opam_switch(switch: str):
         - for what `eval $(opam env)` does: https://stackoverflow.com/questions/30155960/what-is-the-use-of-eval-opam-config-env-or-eval-opam-env-and-their-differen
     """
     raise NotImplementedError  # see: https://discuss.ocaml.org/t/is-eval-opam-env-switch-switch-set-switch-equivalent-to-opam-switch-set-switch/10957
-    # for now use: opam_set_switch
+    # for now use: opam_set_switch_via_opam_switch
     command: str = f"eval $(opam env --switch={switch} --set-switch)"
     res = subprocess.run(command.split(), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     command: str = ["eval", f"$(opam env --switch={switch} --set-switch)"]
@@ -944,7 +947,7 @@ def activate_opam_switch(switch: str):
         raise e
 
 
-def opam_set_switch(switch: str):
+def opam_set_switch_via_opam_switch(switch: str):
     """
     Sets the current opam switch.
 
@@ -959,10 +962,9 @@ def opam_set_switch(switch: str):
     ref:
         - https://discuss.ocaml.org/t/is-eval-opam-env-switch-switch-set-switch-equivalent-to-opam-switch-set-switch/10957
     """
-    logging.info(f'{opam_set_switch=}')
-    # -
-    run_eval_opam_env(switch)
-    # -
+    logging.info(f'{opam_set_switch_via_opam_switch=}')
+    logging.info(f'{switch=}')
+    # - change opam switch
     command: str = f'opam switch set {switch}'
     logging.info(f"-> {command=}")
     try:
@@ -1043,6 +1045,40 @@ def create_entire_pycoq_switch_from_scratch():
     pass
 
 
+def print_opam_switch_active_according_to_opam_switch_cmd(py_prints_on: bool = False) -> str:
+    """ Prints the active switch according to the opam switch command.
+    """
+    # - get output of opam switch
+    try:
+        res = subprocess.run('opam switch'.split(), capture_output=True, text=True)
+        input_str: str = res.stdout
+        lines = input_str.split('\n')
+        output_str = '\n    '.join(lines)
+        print(output_str) if py_prints_on else None
+        logging.info(f'{output_str=}')
+
+        # - get actual opam switch
+        lines = input_str.split('\n')
+        target_line = None
+        for line in lines:
+            if '->' in line:
+                target_line = line
+                break
+        print(f'{target_line=}') if py_prints_on else None
+        logging.info(f'{target_line=}')
+        if len(target_line.split(' ')) > 3:
+            opam_switch: str = target_line.split(' ')[2]
+        else:
+            opam_switch: str = target_line
+        # - done
+        print(f'{opam_switch=}') if py_prints_on else None
+        logging.info(f'{opam_switch=}')
+        return opam_switch
+    except Exception as e:
+        logging.critical(f'Error: {e=}')
+        raise e
+
+
 # - tests
 
 def bash_cmd_to_str(cmd: list[str]) -> str:
@@ -1073,12 +1109,42 @@ def get_make_cmd():
     return cmd
 
 
+def do_test_opam_did_switch_from_python_later_if_pycoqs_state_did_too():
+    """
+
+    """
+    # linux test
+    # switch: str = 'coq-8.10'
+    # switch: str = 'coq-8.12'
+
+    # -- Mac test
+    opam_switch: str = print_opam_switch_active_according_to_opam_switch_cmd(py_prints_on=True)
+    switch: str = 'coq-8.16.0'
+    print(f'new switch should be {switch=}')
+    opam_set_switch_via_opam_switch(switch)
+    opam_switch: str = print_opam_switch_active_according_to_opam_switch_cmd(py_prints_on=True)
+    print(f'new switch should be {switch=}')
+    assert opam_switch == switch, f'{opam_switch=} != {switch=}'
+
+    opam_switch: str = print_opam_switch_active_according_to_opam_switch_cmd(py_prints_on=True)
+    switch: str = 'coq-8.6.1'
+    print(f'new switch should be {switch=}')
+    opam_set_switch_via_opam_switch(switch)
+    opam_switch: str = print_opam_switch_active_according_to_opam_switch_cmd(py_prints_on=True)
+    print(f'new switch should be {switch=}')
+    assert opam_switch == switch, f'{opam_switch=} != {switch=}'
+
+
+def do_test_opam_did_switch_from_python_AND_pycoqs_state_did_too():
+    pass
+
+
+# - run main
+
 if __name__ == '__main__':
-    print('')
-    # cmd: list[str] = ['opam', 'pin', '-y', '--switch', 'ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1', 'debug_proj', '/home/bot/iit-term-synthesis/coq_projects/debug_proj']
-    # cmd: str = bash_cmd_to_str(cmd)
-    # cmd: str = get_cmd_pin_debug_proj()
-    # cmd: str = get_cmd_pin_lf()
-    # cmd: str = get_make_cmd()
-    print(cmd)
-    print('Done!\a')
+    import time
+
+    start = time.time()
+    print(f'{start=}')
+    do_test_opam_did_switch_from_python_later_if_pycoqs_state_did_too()
+    print(f'Done! {time.time() - start=}')
