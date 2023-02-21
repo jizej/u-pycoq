@@ -677,16 +677,7 @@ def strace_build_coq_project_and_get_filenames(coq_proj: CoqProj,
     Builds the give coq-project & returns a list of pycoq context filenames after opam build of a package;
     monitoring calls with (linux's) strace (to get the pycoq context filenames).
 
-    Note:
-        - we decided to force the CoqProj api instead of allowing ppl to pass the switch, coq_project_name,
-        coq_project_name, build_command, etc. directly since it will force you to install/make the make files for each
-        project & depnds properly. Perhaps, later work to remove this & install deps for users here. But we need to
-        put that into in to coq_proj .json file anyway, so the coq_proj api would be needed still.
-
-    coq_package='lf'
-    coq_package_pin='/dfs/scratch0/brando9/pycoq/pycoq/test/lf'
-
-        (iit_synthesis) brando9/afs/cs.stanford.edu/u/brando9/proverbot9001/coq-projects/CompCert $ source make.sh
+    Proberbot example build:
         (iit_synthesis) brando9/afs/cs.stanford.edu/u/brando9/proverbot9001/coq-projects/CompCert $ source make.sh
     """
     logging.info(f'{strace_build_coq_project_and_get_filenames=}')
@@ -704,11 +695,13 @@ def strace_build_coq_project_and_get_filenames(coq_proj: CoqProj,
     logging.info(f'{build_command=}')
 
     # - activate opam switch for coq project
-    get_active_opam_switch_according_to_bash_opam_switch_cmd(py_prints_on=False)
-    opam_set_switch_via_opam_switch(switch)
-    active_switch: str = get_active_opam_switch_according_to_bash_opam_switch_cmd(py_prints_on=False)
+    # get_active_opam_switch_by_running_opam_switch_in_python_subprocess(py_prints_on=False)
+    # opam_set_switch_via_python_subprocess(switch)  # modify .opam switch so next opam env command uses this switch
+    # set_opam_switch_of_main_python_process_to(switch)  # modify os.environ of main python process to use this switch
+    active_switch: str = get_active_opam_switch_by_running_opam_switch_in_python_subprocess(py_prints_on=False)
+    print(f'{active_switch=}')
     logging.info(f'{active_switch=}')
-    assert active_switch == switch, f'active_switch={active_switch} != switch={switch}, failed to set opam switch.'
+    # assert active_switch == switch, f'active_switch={active_switch} != switch={switch}, failed to set opam switch.'
 
     # -- get list of coq files from coq project
     # - since we are in the code that build the coq proj & gets list of filename pycoq contexts, we need to opam pin https://stackoverflow.com/questions/74777579/is-opam-pin-project-needed-when-one-wants-to-install-a-opam-project-with-opam-re
@@ -716,19 +709,69 @@ def strace_build_coq_project_and_get_filenames(coq_proj: CoqProj,
 
     # - keep building & strace-ing until coq proj/pkg succeeds -- we'll know since the filenames list is not empty.
     regex: str = pycoq.pycoq_trace_config.REGEX if regex_to_get_filenames is None else regex_to_get_filenames
+    workdir = coq_project_path
     logging.info(f'{regex=}')
     filenames: list[str] = []  # coq-proj/pkg filenames.
     logging.info(f'{filenames=}')
     if len(filenames) == 0:
-        # else build with the coq-projs make file
-        filenames: list[str] = strace_build_with_make_clean(switch, coq_project_name, coq_project_path, regex)
-    logging.info(f'{filenames=}')
-    if len(filenames) == 0:
-        # try to build it with PyCoq's original opam reinstall
-        filenames: list[str] = strace_build_opam_reinstall_opam_pin(switch, coq_project_name, coq_project_path, regex)
-    logging.info(f'--> before return: {filenames=}')
+        filenames = strace_build_with_make_sh(switch, coq_project_name, coq_project_path, build_command, regex, workdir)
+
+    # if len(filenames) == 0:
+    #     # else build with the coq-projs make file
+    #     filenames: list[str] = strace_build_with_make_clean(switch, coq_project_name, coq_project_path, regex)
+    #     #     raise NotImplementedError
+    # logging.info(f'{filenames=}')
+    # if len(filenames) == 0:
+    #     # try to build it with PyCoq's original opam reinstall
+    #     filenames: list[str] = strace_build_opam_reinstall_opam_pin(switch, coq_project_name, coq_project_path, regex)
+    #     raise NotImplementedError
+    # - return filenames
+    logging.info(f'--> Filenames after a successful proj build: {filenames=}')
     return filenames
 
+# -- strace builds for actual builds
+
+def strace_build_with_make_sh(switch: str,
+                              coq_project_name: str,
+                              coq_project_path: str,
+                              build_command: str,
+                              regex: str,
+                              workdir: Optional = None,
+                              ) -> list[str]:
+    """
+    ref:
+        - https://stackoverflow.com/questions/28054448/specifying-path-to-makefile-using-make-command#:~:text=You%20can%20use%20the%20%2DC,a%20name%20other%20than%20makefile%20.
+    """
+    logging.info(f'{strace_build_with_make_sh=}')
+    # coq_project_path: str = os.path.realpath(coq_project_path)
+    logging.info(f'{coq_project_path=}')
+    logging.info(f'{build_command=} (inside path2coqproj/main.sh')
+
+    # - activate switch
+    pass  # already done outside for now
+
+    # - Get coqc path to bin e.g. executable='~/.opam/coq-8.10/bin/coqc`
+    # executable: str = check_switch_has_coqc_and_return_path_2_coqc_excutable(switch)
+    executable: str = opam_executable('coqc', switch)  # get patht o coqc via: opam exec --switch {switch} which coqc
+    print(f'{executable=}')
+    logging.info(f'{executable=}')
+    # st()
+
+    # - build coq proj
+    logging.info(f'{coq_project_path=}')
+    # logging.info(f'{os.getcwd()=}')
+    # os.chdir(coq_project_path)
+    # logging.info(f'{os.getcwd()=}')
+    # workdir = coq_project_path
+    logging.info(f'{workdir=}')
+    # command: str = f'cd {coq_project_path} && make clean && bash make.sh'
+    command: str = f'cd {coq_project_path} && make clean && opam exec --switch {switch} bash make.sh'
+    strace_logdir = pycoq.config.get_strace_logdir()
+    logging.info(f'{command=}')
+    logging.info(f"{executable}, {regex}, {workdir}, {command} {strace_logdir}")
+    filenames: list[str] = pycoq.trace.strace_build(executable, regex, workdir, command.split(), strace_logdir)
+    logging.info(f'{filenames=}')
+    return filenames
 
 def strace_build_opam_reinstall_opam_pin(switch: str,
                                          coq_project_name: str,
@@ -752,7 +795,7 @@ def strace_build_opam_reinstall_opam_pin(switch: str,
     logging.info(f'{strace_build_opam_reinstall_opam_pin=}')
     # - activate switch
     # activate_opam_switch_via_eval(switch)
-    opam_set_switch_via_opam_switch(switch)
+    opam_set_switch_via_python_subprocess(switch)
 
     # - pins opam proj ref: https://discuss.ocaml.org/t/what-is-the-difference-between-opam-pin-and-opam-install-when-to-use-one-vs-the-other/10942/3
     pin_coq_project(switch, coq_project_name, coq_project_path)
@@ -780,28 +823,15 @@ def strace_build_with_make_clean(switch: str,
     """
     Builds the give coq-project & returns a list of pycoq context filenames after opam build of a package;
     monitoring calls with (linux's) strace (to get the pycoq context filenames).
-
-    note:
-        - for additional details see: strace_build_with_opam_reinstall(...) function
-
-    coq_package='lf'
-    coq_package_pin='/dfs/scratch0/brando9/pycoq/pycoq/test/lf'
-
-        (iit_synthesis) brando9/afs/cs.stanford.edu/u/brando9/proverbot9001/coq-projects/CompCert $ source make.sh
-        make clean -C ~/proverbot9001/coq-projects/CompCert
-
-    todo: to deal with .remake, just use the given build without .configure and put the path to remake at the end,
-    todo: might need to "parse" the build command for this to work, check other todo for build command
     """
     logging.info(f'{strace_build_with_make_clean=}')
     # - activate switch
-    # activate_opam_switch_via_eval(switch)
-    opam_set_switch_via_opam_switch(switch)
+    opam_set_switch_via_python_subprocess(switch)
 
     # - pins opam proj ref: https://discuss.ocaml.org/t/what-is-the-difference-between-opam-pin-and-opam-install-when-to-use-one-vs-the-other/10942/3
     # pin_coq_project(switch, coq_project_name, coq_project_path)
 
-    # - get coqc executable='/dfs/scratch0/brando9/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc'
+    # - get coqc e.g. executable='~/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc'
     executable: str = check_switch_has_coqc_and_return_path_2_coqc_excutable(switch)
 
     # - build with make clean -C and strace it
@@ -821,58 +851,9 @@ def strace_build_with_make_clean(switch: str,
     return filenames
 
 
-def strace_build_with_make_sh(switch: str,
-                              coq_project_name: str,
-                              coq_project_path: str,
-                              build_command: str,
-                              regex: str,
-                              workdir: Optional = None,
-                              ) -> list[str]:
-    """
-cd /lfs/ampere4/0/brando9/proverbot9001/coq-projects/CompCert/
-source make.sh
-
-    note:
-        - in coq_proj obj doesn't have build command proverbot9001's build sh script writes a simple make.
-
-    ref:
-        - https://stackoverflow.com/questions/28054448/specifying-path-to-makefile-using-make-command#:~:text=You%20can%20use%20the%20%2DC,a%20name%20other%20than%20makefile%20.
-    """
-    logging.info(f'{strace_build_with_make_sh=}')
-    # logging.info(f'{coq_project_path=}')
-    # coq_project_path: str = os.path.realpath(coq_project_path)
-    logging.info(f'{coq_project_path=}')
-    logging.info(f'{build_command=} (ran inside path2coqproj/main.sh')
-    # - activate switch
-    # activate_opam_switch_via_eval(switch)
-    opam_set_switch_via_opam_switch(switch)
-
-    # - pins opam proj ref: https://discuss.ocaml.org/t/what-is-the-difference-between-opam-pin-and-opam-install-when-to-use-one-vs-the-other/10942/3
-    # pin_coq_project(switch, coq_project_name, coq_project_path)  # not needed
-
-    # - get coqc executable='/dfs/scratch0/brando9/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc'
-    executable: str = check_switch_has_coqc_and_return_path_2_coqc_excutable(switch)
-
-    # - build with make clean -C and strace it
-    logging.info(f'{os.getcwd()=}')
-    logging.info(f'{coq_project_path=}')
-    os.chdir(coq_project_path)
-    logging.info(f'{os.getcwd()=}')
-    workdir = coq_project_path
-    logging.info(f'{workdir=}')
-    # command: str = f'source {coq_project_path}/main.sh {coq_project_path}'
-    command: str = 'sh make.sh'
-    logging.info(f'{command=}')
-    strace_logdir = pycoq.config.get_strace_logdir()
-    logging.info(f"{executable}, {regex}, {workdir}, {command} {strace_logdir}")
-    filenames: list[str] = pycoq.trace.strace_build(executable, regex, workdir, command.split(), strace_logdir)
-    logging.info(f'{filenames=}')
-    return filenames
-
-
 def check_switch_has_coqc_and_return_path_2_coqc_excutable(switch: str) -> str:
     """
-    executable='/dfs/scratch0/brando9/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc'
+    e.g. executable='~/.opam/coq-8.10/bin/coqc'
     """
     executable: str = opam_executable('coqc', switch)
     if executable is None:
@@ -914,54 +895,18 @@ def pin_coq_project(switch: str,
         raise e
 
 
-def activate_opam_switch_via_eval(switch: str):
+def opam_set_switch_via_python_subprocess(switch: str):
     """
-    Runs eval $(opam env --switch=switch --set-switch). In PyCoq usually the switch name
-    indicates the coq version.
-        e.g. runs `eval $(opam env --switch=coq-8.10 --set-switch)` within python.
-
-    Note: not sure how previous PyCoq made sure the right switch was activated.
+    Runs opam switch set switch via python subprocess & thus modifies some files in .opam dir.
+    Seems we still need to call eval $(opam env) to get the switch activated. But that is not possible in python.
+    So an option is to chang os.environ and have subprocesses inherit the modified os.environ.
 
     ref:
-        - for what `eval $(opam env)` does: https://stackoverflow.com/questions/30155960/what-is-the-use-of-eval-opam-config-env-or-eval-opam-env-and-their-differen
+        - ref: https://discuss.ocaml.org/t/is-eval-opam-env-switch-switch-set-switch-equivalent-to-opam-switch-set-switch/10957/27
+        - https://stackoverflow.com/questions/74803306/what-is-the-difference-between-eval-opam-env-switch-switch-set-switch-a
     """
-    # raise NotImplementedError  # see: https://discuss.ocaml.org/t/is-eval-opam-env-switch-switch-set-switch-equivalent-to-opam-switch-set-switch/10957
-    # for now use: opam_set_switch_via_opam_switch
-    command: str = f"eval $(opam env --switch={switch} --set-switch)"
-    # result = subprocess.run(command.split(), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    # command: str = ["eval", f"$(opam env --switch={switch} --set-switch)"]
-    # command: str = 'eval $(opam env)'
-    logging.info(f"-> {command=}")
-    try:
-        result = subprocess.run(command.split(), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # result = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        logging.info(f'{result.stdout.decode()=}')
-        logging.info(f'{result.stderr.decode()=}')
-    except Exception as e:
-        logging.critical(f'Error: {e=}')
-        raise e
-
-
-def opam_set_switch_via_opam_switch(switch: str):
-    """
-    Sets the current opam switch.
-
-    (I think it's the same as eval $(opam env --switch={switch} --set-switch) ).
-
-        SYNOPSIS
-               opam switch [OPTION]... [COMMAND] [ARG]...
-
-        set SWITCH
-           Set the currently active switch, among the installed switches.
-
-    ref:
-        - https://discuss.ocaml.org/t/is-eval-opam-env-switch-switch-set-switch-equivalent-to-opam-switch-set-switch/10957
-    """
-    logging.info(f'{opam_set_switch_via_opam_switch=}')
+    logging.info(f'{opam_set_switch_via_python_subprocess=}')
     logging.info(f'{switch=}')
-    # - change opam switch
-    # command: str = f'opam switch set {switch}'
-    # logging.info(f"-> {command=}")
     try:
         result = subprocess.run(f'opam switch set {switch}'.split(), check=True, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
@@ -973,56 +918,17 @@ def opam_set_switch_via_opam_switch(switch: str):
         raise e
 
 
-def run_eval_opam_env(switch: str,
-                      ):
+def get_active_opam_switch_by_running_opam_switch_in_python_subprocess(py_prints_on: bool = False) -> str:
     """
-Tries to run through opam exec command arg https://opam.ocaml.org/doc/man/opam-exec.html.
+    Prints the active switch according to the opam switch command & returns it as a string.
 
-     eval $(opam env --switch=switch --set-switch)
-
-    note:
-        - command substituion: replace the command ran here $(cmd) with its output (string).
-        It turns out, $() is called a command substitution. The command in between $() or backticks (“) is run and the
-        output replaces $().
-    ref:
-        - https://discuss.ocaml.org/t/is-eval-opam-env-switch-switch-set-switch-equivalent-to-opam-switch-set-switch/10957/20
-        - command sub: https://blog.wplauncher.com/what-is-in-linux/#:~:text=Example%20of%20command%20substitution%20using%20%24()%20in%20Linux%3A&text=Again%2C%20%24()%20is%20a%20command,another%20context%E2%80%9D%20(Source).
-        - eval $(opam env): https://stackoverflow.com/questions/30155960/what-is-the-use-of-eval-opam-config-env-or-eval-opam-env-and-their-differen?noredirect=1&lq=1
-        - there is a way with opam exec: https://discuss.ocaml.org/t/is-eval-opam-env-switch-switch-set-switch-equivalent-to-opam-switch-set-switch/10957/4
-    """
-    logging.info(f'{run_eval_opam_env=}')
-    # - get cmd sub output
-    try:
-        cmd_sub_output: str = subprocess.check_output(f'opam env --switch={switch} --set-switch'.split())
-    except Exception as e:
-        logging.critical(f'Error: {e=}')
-        raise e
-    # - run command to eval
-    # command: str = f'eval {cmd_sub_output}'  # doesn't seem possible https://stackoverflow.com/questions/53950225/python-check-output-call-to-eval-with-arguments-fails
-    command: list[str] = f'opam exec --switch {switch}'.split()
-    # command: list[str] = command + cmd_sub_output.split()
-    command: list[str] = command + ['sh'] + [cmd_sub_output]
-    logging.info(f"-> {command=}")
-    try:
-        # result = subprocess.run(command.split(), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        result = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        logging.info(f'{result.stdout.decode()=}')
-        logging.info(f'{result.stderr.decode()=}')
-    except Exception as e:
-        logging.critical(f'Error: {e=}')
-        raise e
-
-
-def install_deps_opam_proj_pkg():
-    """ might be nice to implement so that each coq proj can be easily installed with it's dependencies.
-    But note, we might still have to download the coq-project source/code anyway, to mine it for data.
-    Above check if it's true some day.
-    """
-    raise NotImplementedError
-
-
-def get_active_opam_switch_according_to_bash_opam_switch_cmd(py_prints_on: bool = False) -> str:
-    """ Prints the active switch according to the opam switch command & returns it as a string.
+    Note:
+        - guess, based on ocaml discuss, the reason this seems to print the right opam switch after running
+        opam switch set is because it reads some sort of file in the (global) .opam dir. ref: https://discuss.ocaml.org/t/is-eval-opam-env-switch-switch-set-switch-equivalent-to-opam-switch-set-switch/10957/27
+        - to change opam switch we need to do:
+          opam switch set my_switch and afterward eval $(opam env).
+        an alternative is to do this for the main python process and new subprocesses inherit this env.
+        ref: https://discuss.ocaml.org/t/is-eval-opam-env-switch-switch-set-switch-equivalent-to-opam-switch-set-switch/10957/27
     """
     # - get output of opam switch
     try:
@@ -1056,10 +962,14 @@ def get_active_opam_switch_according_to_bash_opam_switch_cmd(py_prints_on: bool 
         raise e
 
 
-def run_opam_env_from_within_python(py_prints_on: bool = False) -> str:
-    """ Get the output of "opam env" from within python."""
+def run_opam_env_from_python_subprocess(switch: str = '', py_prints_on: bool = False) -> str:
+    """ Get the output of opam env from within python by running python subprocess."""
+    if switch == '':
+        cmd: str = 'opam env'
+    else:
+        cmd: str = f'opam env --switch {switch} --set-switch'
     try:
-        result = subprocess.run('opam env'.split(), capture_output=True, text=True)
+        result = subprocess.run(cmd.split(), capture_output=True, text=True)
         opam_env_output: str = result.stdout
         print(f'\n{opam_env_output=}\n') if py_prints_on else None
         logging.info(f'{opam_env_output=}')
@@ -1069,12 +979,14 @@ def run_opam_env_from_within_python(py_prints_on: bool = False) -> str:
         raise e
 
 
-def get_variables_from_opam_env_output(py_prints_on: bool = False) -> dict[str, str]:
+def get_variables_from_opam_env_output_from_python_subprocess(switch: str = '',
+                                                              py_prints_on: bool = False,
+                                                              ) -> dict[str, str]:
     """
     Get the opam env variables from the output of "opam env" from within python as a dict.
     This only tells us what the env variables needed to go into the opam switch that the subprocess that was ran was in.
     """
-    opam_env_output: str = run_opam_env_from_within_python(py_prints_on=py_prints_on)
+    opam_env_output: str = run_opam_env_from_python_subprocess(switch, py_prints_on=py_prints_on)
     opam_env_output_lines: list[str] = opam_env_output.split('\n')
     opam_env_dict: dict = {}
     for line in opam_env_output_lines:
@@ -1083,65 +995,141 @@ def get_variables_from_opam_env_output(py_prints_on: bool = False) -> dict[str, 
             env_var_name, env_value = str_with_var_and_value.split('=')
             env_value: str = env_value.strip("'")
             # "OPAM_SWITCH_PREFIX='/Users/brandomiranda/.opam/test'; export OPAM_SWITCH_PREFIX;".split(';')[0].split('=').strip("'")
-            print(f'{env_var_name=}, {env_value=}')
+            print(f'{env_var_name=}, {env_value=}') if py_prints_on else None
             opam_env_dict[env_var_name] = env_value
+    return opam_env_dict
+
+
+def set_opam_switch_of_main_python_process_to(switch: str, py_prints_on: bool = False) -> dict:
+    """
+    Set the opam switch of the main python process to the given switch by overwriting the os env variables
+    using the values of the output of opam --switch {switch} --set-switch env command.
+    Returns the opam env switch new variables, not the overwritten os.environ variables.
+
+    Manually setting the env vars:
+        (meta_learning) brandomiranda~ ❯ opam env --switch=coq-8.10 --set-switch
+
+        OPAMSWITCH='coq-8.10'; export OPAMSWITCH;
+        OPAM_SWITCH_PREFIX='/Users/brandomiranda/.opam/coq-8.10'; export OPAM_SWITCH_PREFIX;
+        CAML_LD_LIBRARY_PATH='/Users/brandomiranda/.opam/coq-8.10/lib/stublibs:/Users/brandomiranda/.opam/coq-8.10/lib/ocaml/stublibs:/Users/brandomiranda/.opam/coq-8.10/lib/ocaml'; export CAML_LD_LIBRARY_PATH;
+        OCAML_TOPLEVEL_PATH='/Users/brandomiranda/.opam/coq-8.10/lib/toplevel'; export OCAML_TOPLEVEL_PATH;
+        PATH='/Users/brandomiranda/.opam/coq-8.10/bin:/Users/brandomiranda/.elan/bin:/Users/brandomiranda/opt/anaconda3/envs/meta_learning/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin'; export PATH;    In the main python process via os.environ[var] = var_value
+    """
+    # - get opam env. note: if switch is given it runs f'opam env --switch {switch} --set-switch' else 'opam env'. For proverbot looking at its main.sh we want the first one so give switch name.
+    opam_env_dict: dict = get_variables_from_opam_env_output_from_python_subprocess(switch, py_prints_on=py_prints_on)
+    # - set env vars to os.environ
+    for env_var_name, env_var_value in opam_env_dict.items():
+        os.environ[env_var_name] = env_var_value
     return opam_env_dict
 
 
 # - tests
 
 def experiment_check_that_subprocess_seems_to_persist_state_of_its_env_vars_test_():
-    """ Test that opam did switch from pyton. """
+    """
+    This test is to see if the subprocess that is ran in the test below persists the state of the env vars.
+
+    ref: https://stackoverflow.com/questions/74803306/what-is-the-difference-between-eval-opam-env-switch-switch-set-switch-a
+    """
     # -- before tests runs what is opam switch
-    opam_switch: str = get_active_opam_switch_according_to_bash_opam_switch_cmd(py_prints_on=False)
+    opam_switch: str = get_active_opam_switch_by_running_opam_switch_in_python_subprocess(py_prints_on=False)
     print(f'{opam_switch=}')
     assert opam_switch == 'test', f'{opam_switch=} != test'
 
     # -- test
     print('---- first switch ----')
     switch: str = 'coq-8.10'
-    opam_set_switch_via_opam_switch(switch)
-    opam_switch: str = get_active_opam_switch_according_to_bash_opam_switch_cmd(py_prints_on=True)
+    opam_set_switch_via_python_subprocess(switch)
+    opam_switch: str = get_active_opam_switch_by_running_opam_switch_in_python_subprocess(py_prints_on=True)
     print(f'new switch should be {switch=}')
     assert opam_switch == switch, f'{opam_switch=} != {switch=}'
 
     print('---- second switch ----')
     switch: str = 'coq-8.12'
-    opam_set_switch_via_opam_switch(switch)
-    opam_switch: str = get_active_opam_switch_according_to_bash_opam_switch_cmd(py_prints_on=True)
+    opam_set_switch_via_python_subprocess(switch)
+    opam_switch: str = get_active_opam_switch_by_running_opam_switch_in_python_subprocess(py_prints_on=True)
     print(f'new switch should be {switch=}')
     assert opam_switch == switch, f'{opam_switch=} != {switch=}'
 
-    # - print opam env of subprocess module vs main python
-
-    # -- opam switch through python via eval: so question: https://stackoverflow.com/questions/74803306/what-is-the-difference-between-eval-opam-env-switch-switch-set-switch-a
-    print('-------- Check opam env is the expected one--------')
-
 
 def check_os_env_has_the_vars_set_by_opam_env_test_():
-    py_prints_on: bool = False
     import uutils
 
     # -- opam switch set for subprocess & get output of opam env
-    opam_set_switch_via_opam_switch('test')
-    activate_switch: str = get_active_opam_switch_according_to_bash_opam_switch_cmd(py_prints_on=py_prints_on)
+    opam_set_switch_via_python_subprocess('test')
+    activate_switch: str = get_active_opam_switch_by_running_opam_switch_in_python_subprocess()
     print(f'{activate_switch=}')
 
-    opam_set_switch_via_opam_switch('coq-8.10')
-    activate_switch: str = get_active_opam_switch_according_to_bash_opam_switch_cmd(py_prints_on=py_prints_on)
+    opam_set_switch_via_python_subprocess('coq-8.10')
+    activate_switch: str = get_active_opam_switch_by_running_opam_switch_in_python_subprocess()
     print(f'{activate_switch=}')
 
-    opam_env_dict: dict = get_variables_from_opam_env_output(py_prints_on=py_prints_on)
+    opam_env_dict: dict = get_variables_from_opam_env_output_from_python_subprocess()
     print(f'opam_env_dict=')
     uutils.pprint_dict(opam_env_dict)
 
     # -- get output of os.env
-    # - verify that subprocess indeed calls it's own process indepdent of python main. The fact they don't match means that the subprocess is calling it's own opam env. Mystery is why that subprocess is persistent despite docs saying it returns a completed process: https://stackoverflow.com/questions/74803306/what-is-the-difference-between-eval-opam-env-switch-switch-set-switch-a, https://discuss.ocaml.org/t/is-eval-opam-env-switch-switch-set-switch-equivalent-to-opam-switch-set-switch/10957/25
+    # - verify that subprocess indeed calls it's own process independent of python main. The fact they don't match means that the subprocess is calling it's own opam env. Mystery is why that subprocess is persistent despite docs saying it returns a completed process: https://stackoverflow.com/questions/74803306/what-is-the-difference-between-eval-opam-env-switch-switch-set-switch-a, https://discuss.ocaml.org/t/is-eval-opam-env-switch-switch-set-switch-equivalent-to-opam-switch-set-switch/10957/25
     assert not uutils.check_dict1_is_in_dict2(opam_env_dict, os.environ,
                                               verbose=True), f'Err: dict1 is opam env of subprocess so it should point to .opam/coq-8.10 while main python should point to .opam/test (assuming your terminal is indeeed set to opam switch called test)'
     # seems that subprocess persists and still outputs .opam/coq-8.10
-    activate_switch: str = get_active_opam_switch_according_to_bash_opam_switch_cmd(py_prints_on=py_prints_on)
+    activate_switch: str = get_active_opam_switch_by_running_opam_switch_in_python_subprocess()
     print(f'{activate_switch=}')
+
+
+def check_subprocesses_inherit_the_opam_env_from_main_python_process_():
+    import uutils
+    # - make sure initial opam switch is test
+    opam_env_dict: dict = get_variables_from_opam_env_output_from_python_subprocess()
+    # uutils.pprint_dict(opam_env_dict)
+    print(f'--> (subprocess) {opam_env_dict["OPAM_SWITCH_PREFIX"]=}')
+
+    print()
+    print(f"{os.environ['OPAMSWITCH']=}") if 'OPAMSWITCH' in os.environ else None
+    print(f"{os.environ['OPAM_SWITCH_PREFIX']=}")
+    assert os.environ['OPAM_SWITCH_PREFIX'] == os.path.expanduser('~/.opam/test'), 'Err:should be test, but is' \
+                                                                                   f'{os.environ["OPAM_SWITCH_PREFIX"]}'
+    # - change main python process to opam switch
+    set_opam_switch_of_main_python_process_to('coq-8.10')
+    print()
+    print(f"{os.environ['OPAMSWITCH']=}") if 'OPAMSWITCH' in os.environ else None
+    print(f"{os.environ['OPAM_SWITCH_PREFIX']=}")
+    print(f'--> (subprocess) {opam_env_dict["OPAM_SWITCH_PREFIX"]=}')
+
+    set_opam_switch_of_main_python_process_to('coq-8.12')
+    print()
+    print(f"{os.environ['OPAMSWITCH']=}") if 'OPAMSWITCH' in os.environ else None
+    print(f"{os.environ['OPAM_SWITCH_PREFIX']=}")
+    print(f'--> (subprocess) {opam_env_dict["OPAM_SWITCH_PREFIX"]=}')
+
+    set_opam_switch_of_main_python_process_to('test')
+    print()
+    print(f"{os.environ['OPAMSWITCH']=}") if 'OPAMSWITCH' in os.environ else None
+    print(f"{os.environ['OPAM_SWITCH_PREFIX']=}")
+    print(f'--> (subprocess) {opam_env_dict["OPAM_SWITCH_PREFIX"]=}')
+
+
+def run_new_process_using_main_pythons_env_vars_test_():
+    """
+In this example, we use the subprocess.run() function to run the opam env command in a new subprocess. The shell=True argument tells subprocess to run the command in a shell, which is necessary for commands like opam env that rely on shell functionality. The check=True argument tells subprocess to raise an error if the command returns a non-zero exit code.
+
+We also pass stdout=subprocess.PIPE and stderr=subprocess.PIPE to capture the output and error streams of the command, and we pass env=dict(os.environ) to inherit the environment variables of the current Python process.
+
+Finally, we decode the output of the command and print it to the console.
+
+Note that running commands in a new subprocess can be a security risk if the command is not properly sanitized. Be sure to validate any user input before running it in a subprocess.
+    """
+    # how do I run a bash command (e.g. opam env) in a new subprocess that inherits the environment variables of my running main python process?
+    import subprocess
+
+    # Run the `opam env` command in a new subprocess, inheriting the environment variables
+    # of the current Python process
+    env_command = "opam env"
+    result = subprocess.run(env_command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            env=dict(os.environ))
+
+    # Print the output of the command
+    print(result.stdout.decode())
 
 
 # - run main
@@ -1151,6 +1139,7 @@ if __name__ == '__main__':
 
     start = time.time()
     print(f'{start=}')
-    experiment_check_that_subprocess_seems_to_persist_state_of_its_env_vars_test_()
-    check_os_env_has_the_vars_set_by_opam_env_test_()
+    # experiment_check_that_subprocess_seems_to_persist_state_of_its_env_vars_test_()
+    # check_os_env_has_the_vars_set_by_opam_env_test_()
+    check_subprocesses_inherit_the_opam_env_from_main_python_process_()
     print(f'Done! {time.time() - start=}')

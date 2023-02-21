@@ -164,7 +164,9 @@ def strace_build(executable: str,
                  regex: str,
                  workdir: Optional[str],
                  command: List[str],
-                 strace_logdir=None) -> List[str]:
+                 strace_logdir=None,
+                 env: Optional[dict] = None,
+                 ) -> List[str]:
     """
     Trace calls of executable during access to files that match regex
     in workdir while executing the command and  returns the list of pycoq_context
@@ -178,7 +180,7 @@ def strace_build(executable: str,
     specified with the -o option.
 
     ref:
-        - replacing strace in mac: https://stackoverflow.com/questions/73724074/how-to-call-an-equivalent-command-to-strace-on-mac-ideally-from-python
+        - wontfix: replacing strace in mac: https://stackoverflow.com/questions/73724074/how-to-call-an-equivalent-command-to-strace-on-mac-ideally-from-python
     """
     print('---- Calling strace_build ----')
 
@@ -202,18 +204,27 @@ def strace_build(executable: str,
                               cwd=workdir,
                               text=True,
                               stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE) as proc:
-            for line in iter(proc.stdout.readline, ''):
+                              stderr=subprocess.PIPE,
+                              env=env,
+                              ) as proc:
+            lines = list(iter(proc.stdout.readline, ''))
+            print(f'{lines=}')
+            logging.info(f'{lines=}')
+            # for line in iter(proc.stdout.readline, ''):
+            for line in lines:
                 logging.debug(f"strace stdout: {line}")
                 print(f"strace stdout: {line=}")
-            logging.info(f"strace stderr: {proc.stderr.read()}"
-                         "waiting strace to finish...")
+            logging.info(f"strace stderr: {proc.stderr.read()=} waiting strace to finish...")
             proc.wait()
-        logging.info('strace finished')
-        res: list[str] = parse_strace_logdir(logdir, executable, regex)
-        print(f'---- Done with strace_build {strace_build=} ----')
-        # st()
-        return res
+        print(f'----> strace finished: {command=}')
+        logging.info(f'----> strace finished: {command=}')
+        result: list[str] = parse_strace_logdir(logdir, executable, regex)
+        print(f'{result=}')
+        logging.info(f'{result=}')
+
+        print(f'---->> Done with strace_build {strace_build=} <<----')
+        st()
+        return result
 
     if strace_logdir is None:
         with tempfile.TemporaryDirectory() as _logdir:
@@ -224,111 +235,7 @@ def strace_build(executable: str,
         return _strace_build(executable, regex, workdir, command, strace_logdir_cur)
 
 
-def strace_build_mac_m1(executable: str,
-                 regex: str,
-                 workdir: Optional[str],
-                 command: List[str],
-                 strace_logdir=None) -> List[str]:
-    ''' trace calls of executable during access to files that match regex
-    in workdir while executing the command and  returns the list of pycoq_context
-    file names
-
-    In the simplest case strace runs the specified command until it
-    exits.  It intercepts and records the system calls which are
-    called by a process and the signals which are received by a
-    process.  The name of each system call, its arguments and its
-    return value are printed on standard error or to the file
-    specified with the -o option.
-
-    https://stackoverflow.com/questions/73724074/how-to-call-an-equivalent-command-to-strace-on-mac-ideally-from-python
-
-    plan:
-    - get the command we are running
-    - pip push my pycoq with no name changes so code doesn't break
-    - pull the rest of the repos needed, I don't think anything else since lf is here
-    - harcode test
-    - actually, look at commands...we need to provide for reproducibility a way to install opam and all this stuff
-    without docker but in the mac since we are trying to do a mac install. Argh...
-
-    COMMANDS:
-    pycoq: tracing /home/bot/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc accesing .*\.v$ while executing ['opam', 'reinstall', '--yes', '--switch', 'ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1', '--keep-build-dir', 'lf'] from None with curdir /home/bot
-    executable='/home/bot/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc'
-    regex='.*\\.v$'
-    workdir=None
-    command=['opam', 'reinstall', '--yes', '--switch', 'ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1', '--keep-build-dir', 'lf']
-    curdir: os.getcwd()='/home/bot'
-
-    google for replacement (analogue) of functionality of strace for Mac OS and modify the parser that parses output of strace for that “mac-strace” The strace functionality is used to inspect the Coq building system to record all options and arguments and environment for coqc in which each individual .v file has be processed by coqc during the build process. The Coq build system is complicated, and i didn’t parse but resolved to just observing by strace of what the actual Coq does and strace simply records all options and arguments (like -R etc) of what the actual Coq does so that pycoq could call coqc with exactly the same options and arguments
-    '''
-    print('---- Calling strace_build_mac_m1 ----')
-
-    def _strace_build(executable, regex, workdir, command, logdir):
-        logfname = os.path.join(logdir, 'strace.log')
-        logging.info(f"pycoq: tracing {executable} accesing {regex} while "
-                     f"executing {command} from {workdir} with "
-                     f"curdir {os.getcwd()}")
-        print(f"pycoq: tracing {executable} accesing {regex} while "
-              f"executing {command} from {workdir} with "
-              f"curdir {os.getcwd()}")
-        print(f'{executable=}')
-        print(f'{regex=}')
-        print(f'{workdir=}')
-        print(f'{command=}')
-        print(f'curdir: {os.getcwd()=}')
-        with subprocess.Popen(['dtruss', '-e', 'trace=execve',
-                               '-v', '-ff', '-s', '100000000',
-                               '-xx', '-ttt',
-                               '-o', logfname] + command,
-                              cwd=workdir,
-                              text=True,
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE) as proc:
-            for line in iter(proc.stdout.readline, ''):
-                logging.debug(f"strace stdout: {line}")
-                print(f"strace stdout: {line=}")
-            logging.info(f"strace stderr: {proc.stderr.read()}"
-                         "waiting strace to finish...")
-            proc.wait()
-        logging.info('strace finished')
-        res: list[str] = parse_strace_logdir(logdir, executable, regex)
-        print(f'---- Done with strace_build_mac_m1 {strace_build_mac_m1=} ----')
-        # st()
-        return res
-
-    if strace_logdir is None:
-        with tempfile.TemporaryDirectory() as _logdir:
-            return _strace_build(executable, regex, workdir, command, _logdir)
-    else:
-        os.makedirs(strace_logdir, exist_ok=True)
-        strace_logdir_cur = tempfile.mkdtemp(dir=strace_logdir)
-        return _strace_build(executable, regex, workdir, command, strace_logdir_cur)
-
-
-# -
-
-def code_for_mac_m1():
-    coq_package = 'lf'
-    coq_package_pin = '~/pycoq/pycoq/test/lf'
-    coq_package_pin = os.path.expanduser(coq_package_pin)
-
-    print(f'coq_package: {coq_package=}')
-    print(f'coq_package_pin: {coq_package_pin=}')
-
-
-    ### pycoq: tracing /home/bot/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc accesing .*\.v$ while executing ['opam', 'reinstall', '--yes', '--switch', 'ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1', '--keep-build-dir', 'lf'] from None with curdir /home/bot
-    # executable='/home/bot/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc'
-    # regex='.*\\.v$'
-    # workdir=None
-    # command=['opam', 'reinstall', '--yes', '--switch', 'ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1', '--keep-build-dir', 'lf']
-    # curdir: os.getcwd()='/home/bot'
-
-    # - get the filename in split
-    # path2filenames: list[str] = pycoq.opam.opam_strace_build(coq_proj, coq_proj_pin)
-    path2filenames_raw: list[str] = strace_build_mac_m1()
-    path2filenames_raw.sort()
-    print(f'\n====----> Populate coq pkg/proj data with files: {path2filenames_raw=}')
-
+# -- run main
 
 if __name__ == '__main__':
-    code_for_mac_m1()
     print('Done!\n\a')
