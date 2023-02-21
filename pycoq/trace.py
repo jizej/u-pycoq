@@ -211,7 +211,7 @@ def strace_build(executable: str,
             proc.wait()
         logging.info('strace finished')
         res: list[str] = parse_strace_logdir(logdir, executable, regex)
-        print('---- Done with strace_build ----')
+        print(f'---- Done with strace_build {strace_build=} ----')
         # st()
         return res
 
@@ -291,7 +291,7 @@ def strace_build_mac_m1(executable: str,
             proc.wait()
         logging.info('strace finished')
         res: list[str] = parse_strace_logdir(logdir, executable, regex)
-        print('---- Done with strace_build_mac_m1 ----')
+        print(f'---- Done with strace_build_mac_m1 {strace_build_mac_m1=} ----')
         # st()
         return res
 

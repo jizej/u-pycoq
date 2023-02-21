@@ -159,7 +159,7 @@ def get_compcert_coq_projs() -> CoqProjs:
 
 
 def get_coqgym_coq_projs(num_current_coqgym_projs: int = 124) -> CoqProjs:
-    path_2_coq_projs: Path = Path('~/proverbot9001/coqgym/').expanduser()
+    path_2_coq_projs: Path = Path('~/proverbot9001/coq-projects/').expanduser()
     print(f'{path_2_coq_projs=}')
     path_2_coq_projs_json_splits: Path = Path('~/proverbot9001/coqgym_projs_splits.json').expanduser()
     print(f'{path_2_coq_projs_json_splits=}')
