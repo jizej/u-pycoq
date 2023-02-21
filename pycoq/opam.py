@@ -963,7 +963,8 @@ def opam_set_switch_via_opam_switch(switch: str):
     # command: str = f'opam switch set {switch}'
     # logging.info(f"-> {command=}")
     try:
-        result = subprocess.run(f'opam switch set {switch}'.split(), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(f'opam switch set {switch}'.split(), check=True, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
         # result = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         logging.info(f'{result.stdout.decode()=}')
         logging.info(f'{result.stderr.decode()=}')
@@ -1055,35 +1056,6 @@ def get_active_opam_switch_according_to_bash_opam_switch_cmd(py_prints_on: bool 
         raise e
 
 
-def check_full_opam_env_switch_within_python(py_prints_on: bool = False):
-    """
-
-    Check:
-        - "opam env" displays the right env variables being set
-        - check "opam env" and "os.env" match (set?)
-        - check if outpout of "opam switch" is consistent with all the above
-
-    Effortless:
-        - just check os.env has the right variables set according to "opam env"
-        1. get the variable values form "opam env"
-        2. check they are in os.env
-    """
-    # -
-    import uutils
-    opam_set_switch_via_opam_switch('coq-8.10')
-    # - get output of opam env
-    opam_env_dict: dict = get_variables_from_opam_env_output(py_prints_on=py_prints_on)
-    print(f'opam_env_dict=')
-    uutils.pprint_dict(opam_env_dict)
-    # - get output of os.env
-    # print(f'\n{os.environ=}\n')
-    # - verify that subprocess indeed calls it's own process indepdent of python main
-    assert not uutils.check_dict1_is_in_dict2(opam_env_dict, os.environ, verbose=True)
-    # - get output of opam switch
-    get_active_opam_switch_according_to_bash_opam_switch_cmd(py_prints_on=py_prints_on)
-    return
-
-
 def run_opam_env_from_within_python(py_prints_on: bool = False) -> str:
     """ Get the output of "opam env" from within python."""
     try:
@@ -1118,7 +1090,7 @@ def get_variables_from_opam_env_output(py_prints_on: bool = False) -> dict[str, 
 
 # - tests
 
-def do_test_opam_did_switch_from_python_later_if_pycoqs_state_did_too():
+def experiment_check_that_subprocess_seems_to_persist_state_of_its_env_vars_test_():
     """ Test that opam did switch from pyton. """
     # -- before tests runs what is opam switch
     opam_switch: str = get_active_opam_switch_according_to_bash_opam_switch_cmd(py_prints_on=False)
@@ -1140,33 +1112,45 @@ def do_test_opam_did_switch_from_python_later_if_pycoqs_state_did_too():
     print(f'new switch should be {switch=}')
     assert opam_switch == switch, f'{opam_switch=} != {switch=}'
 
+    # - print opam env of subprocess module vs main python
+
     # -- opam switch through python via eval: so question: https://stackoverflow.com/questions/74803306/what-is-the-difference-between-eval-opam-env-switch-switch-set-switch-a
     print('-------- Check opam env is the expected one--------')
-    check_full_opam_env_switch_within_python()
 
 
-def check_os_env_has_the_vars_set_by_opam_env():
-    # -- before tests runs what is opam switch
-    # opam_switch: str = get_active_opam_switch_according_to_bash_opam_switch_cmd(py_prints_on=False)
-    # print(f'{opam_switch=}')
-    # assert opam_switch == 'test', f'{opam_switch=} != test'
+def check_os_env_has_the_vars_set_by_opam_env_test_():
+    py_prints_on: bool = False
+    import uutils
 
-    # -
-    # run_opam_env_from_within_python(py_prints_on=True)
-    # get_variables_from_opam_env_output()
-    check_full_opam_env_switch_within_python()
+    # -- opam switch set for subprocess & get output of opam env
+    opam_set_switch_via_opam_switch('test')
+    activate_switch: str = get_active_opam_switch_according_to_bash_opam_switch_cmd(py_prints_on=py_prints_on)
+    print(f'{activate_switch=}')
+
+    opam_set_switch_via_opam_switch('coq-8.10')
+    activate_switch: str = get_active_opam_switch_according_to_bash_opam_switch_cmd(py_prints_on=py_prints_on)
+    print(f'{activate_switch=}')
+
+    opam_env_dict: dict = get_variables_from_opam_env_output(py_prints_on=py_prints_on)
+    print(f'opam_env_dict=')
+    uutils.pprint_dict(opam_env_dict)
+
+    # -- get output of os.env
+    # - verify that subprocess indeed calls it's own process indepdent of python main. The fact they don't match means that the subprocess is calling it's own opam env. Mystery is why that subprocess is persistent despite docs saying it returns a completed process: https://stackoverflow.com/questions/74803306/what-is-the-difference-between-eval-opam-env-switch-switch-set-switch-a, https://discuss.ocaml.org/t/is-eval-opam-env-switch-switch-set-switch-equivalent-to-opam-switch-set-switch/10957/25
+    assert not uutils.check_dict1_is_in_dict2(opam_env_dict, os.environ,
+                                              verbose=True), f'Err: dict1 is opam env of subprocess so it should point to .opam/coq-8.10 while main python should point to .opam/test (assuming your terminal is indeeed set to opam switch called test)'
+    # seems that subprocess persists and still outputs .opam/coq-8.10
+    activate_switch: str = get_active_opam_switch_according_to_bash_opam_switch_cmd(py_prints_on=py_prints_on)
+    print(f'{activate_switch=}')
 
 
 # - run main
-"""
-python ~/pycoq/pycoq/opam.py
-"""
 
 if __name__ == '__main__':
     import time
 
     start = time.time()
     print(f'{start=}')
-    # do_test_opam_did_switch_from_python_later_if_pycoqs_state_did_too()
-    check_os_env_has_the_vars_set_by_opam_env()
+    experiment_check_that_subprocess_seems_to_persist_state_of_its_env_vars_test_()
+    check_os_env_has_the_vars_set_by_opam_env_test_()
     print(f'Done! {time.time() - start=}')
