@@ -672,6 +672,7 @@ def opam_original_pycoq_pre_setup(coq_package: str,
 
 def strace_build_coq_project_and_get_filenames(coq_proj: CoqProj,
                                                regex_to_get_filenames: Optional[str] = None,
+                                               make_clean_coq_proj: bool = True,
                                                ) -> list[str]:
     """
     Builds the give coq-project & returns a list of pycoq context filenames after opam build of a package;
@@ -684,177 +685,78 @@ def strace_build_coq_project_and_get_filenames(coq_proj: CoqProj,
     logging.info(f'{root_option()=}')
 
     # - use switch corresponding to the coq proj
+    print(f'{coq_proj=}')
     logging.info(f'{coq_proj=}')
     switch: str = coq_proj.switch  # e.g. coq-8.10
     coq_project_name: str = coq_proj.project_name  # e.g. constructive-geometry
     coq_project_path: str = coq_proj.get_coq_proj_path()  # e.g. ~/proverbot9001/coq-projects/
-    build_command: str = coq_proj.build_command  # e.g. configure x86_64-linux && make
-    logging.info(f'{switch=}')
-    logging.info(f'{coq_project_name=}')
-    logging.info(f'{coq_project_path=}')
-    logging.info(f'{build_command=}')
+    build_command: str = coq_proj.build_command  # e.g. configure x86_64-linux && make or not present or ''
 
     # - activate opam switch for coq project
-    # get_active_opam_switch_by_running_opam_switch_in_python_subprocess(py_prints_on=False)
-    # opam_set_switch_via_python_subprocess(switch)  # modify .opam switch so next opam env command uses this switch
-    # set_opam_switch_of_main_python_process_to(switch)  # modify os.environ of main python process to use this switch
-    active_switch: str = get_active_opam_switch_by_running_opam_switch_in_python_subprocess(py_prints_on=False)
-    print(f'{active_switch=}')
-    logging.info(f'{active_switch=}')
-    # assert active_switch == switch, f'active_switch={active_switch} != switch={switch}, failed to set opam switch.'
-
-    # -- get list of coq files from coq project
-    # - since we are in the code that build the coq proj & gets list of filename pycoq contexts, we need to opam pin https://stackoverflow.com/questions/74777579/is-opam-pin-project-needed-when-one-wants-to-install-a-opam-project-with-opam-re
-    # pin_coq_project(switch, coq_project_name, coq_proect_path)  # todo double check
+    opam_set_switch_via_python_subprocess(switch)  # modify .opam switch so next opam env command uses this switch
+    set_opam_switch_of_main_python_process_to(switch)  # modify os.environ of main python process to use this switch
+    logging.info(f'active_switch: {get_active_opam_switch_by_running_opam_switch_in_python_subprocess()}')
 
     # - keep building & strace-ing until coq proj/pkg succeeds -- we'll know since the filenames list is not empty.
     regex: str = pycoq.pycoq_trace_config.REGEX if regex_to_get_filenames is None else regex_to_get_filenames
     workdir = coq_project_path
-    logging.info(f'{regex=}')
-    filenames: list[str] = []  # coq-proj/pkg filenames.
+    filenames: list[str] = []  # coq-proj/pkg filenames pycoq context
     logging.info(f'{filenames=}')
     if len(filenames) == 0:
-        filenames = strace_build_with_make_sh(switch, coq_project_name, coq_project_path, build_command, regex, workdir)
-
-    # if len(filenames) == 0:
-    #     # else build with the coq-projs make file
-    #     filenames: list[str] = strace_build_with_make_clean(switch, coq_project_name, coq_project_path, regex)
-    #     #     raise NotImplementedError
-    # logging.info(f'{filenames=}')
-    # if len(filenames) == 0:
-    #     # try to build it with PyCoq's original opam reinstall
-    #     filenames: list[str] = strace_build_opam_reinstall_opam_pin(switch, coq_project_name, coq_project_path, regex)
-    #     raise NotImplementedError
-    # - return filenames
-    logging.info(f'--> Filenames after a successful proj build: {filenames=}')
+        filenames = strace_build_with_build_command(switch, coq_project_name, coq_project_path, build_command, regex,
+                                                    workdir, make_clean_coq_proj=make_clean_coq_proj)
+    # - return filenames from pycoq context e.g. ['/afs/cs.stanford.edu/u/brando9/proverbot9001/coq-projects/constructive-geometry/problems.v._pycoq_context', ...,] ok if you save this it needs to go to the data set dir since it's server dependent/absolute path depedent.
+    print(f'{filenames=}')
+    logging.info(f'{filenames=}')
     return filenames
+
 
 # -- strace builds for actual builds
 
-def strace_build_with_make_sh(switch: str,
-                              coq_project_name: str,
-                              coq_project_path: str,
-                              build_command: str,
-                              regex: str,
-                              workdir: Optional = None,
-                              ) -> list[str]:
+def strace_build_with_build_command(switch: str,
+                                    coq_project_name: str,
+                                    coq_project_path: str,
+                                    build_command: str,
+                                    regex: str,
+                                    workdir: Optional = None,
+                                    activate_switch_py_main: bool = True,
+                                    make_clean_coq_proj: bool = False,
+                                    ) -> list[str]:
     """
     ref:
-        - https://stackoverflow.com/questions/28054448/specifying-path-to-makefile-using-make-command#:~:text=You%20can%20use%20the%20%2DC,a%20name%20other%20than%20makefile%20.
+        - main discussion of how to use eval with my opam setting ocaml discuss: https://discuss.ocaml.org/t/is-eval-opam-env-switch-switch-set-switch-equivalent-to-opam-switch-set-switch/10957/31
+        - main discussion of how to use eval with my opam setting SO: https://stackoverflow.com/questions/74803306/what-is-the-difference-between-eval-opam-env-switch-switch-set-switch-a/75513889?noredirect=1#comment133271645_75513889
+        - how to specify absolute path to make...but I think now it's not needed: https://stackoverflow.com/questions/28054448/specifying-path-to-makefile-using-make-command#:~:text=You%20can%20use%20the%20%2DC,a%20name%20other%20than%20makefile%20.
     """
-    logging.info(f'{strace_build_with_make_sh=}')
-    # coq_project_path: str = os.path.realpath(coq_project_path)
-    logging.info(f'{coq_project_path=}')
-    logging.info(f'{build_command=} (inside path2coqproj/main.sh')
+    workdir = coq_project_path if workdir is None else workdir
 
     # - activate switch
-    pass  # already done outside for now
+    if activate_switch_py_main:
+        opam_set_switch_via_python_subprocess(switch)  # modify .opam switch so next opam env command uses this switch
+        set_opam_switch_of_main_python_process_to(switch)  # modify os.environ of main python process to use this switch
+        logging.info(f'active_switch: {get_active_opam_switch_by_running_opam_switch_in_python_subprocess()}')
 
     # - Get coqc path to bin e.g. executable='~/.opam/coq-8.10/bin/coqc`
-    # executable: str = check_switch_has_coqc_and_return_path_2_coqc_excutable(switch)
-    executable: str = opam_executable('coqc', switch)  # get patht o coqc via: opam exec --switch {switch} which coqc
-    print(f'{executable=}')
+    executable: str = opam_executable('coqc', switch)  # get path o coqc via: opam exec --switch {switch} which coqc
     logging.info(f'{executable=}')
-    # st()
 
-    # - build coq proj
-    logging.info(f'{coq_project_path=}')
-    # logging.info(f'{os.getcwd()=}')
-    # os.chdir(coq_project_path)
-    # logging.info(f'{os.getcwd()=}')
-    # workdir = coq_project_path
-    logging.info(f'{workdir=}')
-    # command: str = f'cd {coq_project_path} && make clean && bash make.sh'
-    command: str = f'cd {coq_project_path} && make clean && opam exec --switch {switch} bash make.sh'
+    # - build coq-proj
     strace_logdir = pycoq.config.get_strace_logdir()
-    logging.info(f'{command=}')
-    logging.info(f"{executable}, {regex}, {workdir}, {command} {strace_logdir}")
-    filenames: list[str] = pycoq.trace.strace_build(executable, regex, workdir, command.split(), strace_logdir)
-    logging.info(f'{filenames=}')
-    return filenames
-
-def strace_build_opam_reinstall_opam_pin(switch: str,
-                                         coq_project_name: str,
-                                         coq_project_path: str,
-                                         regex: str,
-                                         workdir: Optional = None,
-                                         ):
-    """
-    opam reinstall --yes --switch ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1 --keep-build-dir lf
-
-    note:
-        - since I learned that opam pin ... works for local customizations of projs (which it seems we need to mine data
-        or at least idk how to mine data using the "official" version from the authors, perhaps this way is better since
-        we force reproducibility of the version of the data set we train with).
-        Thus, this ref: https://discuss.ocaml.org/t/how-does-one-reinstall-an-opam-package-proj-using-the-absolute-path-to-the-project/10944
-        - hypothesis: opam install is needed just like make clean -C is needed, we need to force opam to recompile so
-        that strace can get us the files we need.
-            - alternatively, re-write strace & instead loop through the compiled files in coq-proj & create the right
-            pycoq context. Not effortless! Avoid!
-    """
-    logging.info(f'{strace_build_opam_reinstall_opam_pin=}')
-    # - activate switch
-    # activate_opam_switch_via_eval(switch)
-    opam_set_switch_via_python_subprocess(switch)
-
-    # - pins opam proj ref: https://discuss.ocaml.org/t/what-is-the-difference-between-opam-pin-and-opam-install-when-to-use-one-vs-the-other/10942/3
-    pin_coq_project(switch, coq_project_name, coq_project_path)
-
-    # - get coqc executable='/dfs/scratch0/brando9/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc'
-    executable: str = check_switch_has_coqc_and_return_path_2_coqc_excutable(switch)
-
-    # - execute opam reinstall and strace it to get pycoq context filenames
-    # command: str = f'opam reinstall {root_option()} --yes --switch {switch} --keep-build-dir {coq_project_name}'
-    # command: str = f'opam reinstall {root_option()} --yes --switch {switch} --keep-build-dir {coq_project_name}'
-    command = ''  # todo change above to list
-    # need to change the above to list
-    strace_logdir = pycoq.config.get_strace_logdir()
-    logging.info(f"{executable}, {regex}, {workdir}, {command} {strace_logdir}")
-    filenames: list[str] = pycoq.trace.strace_build(executable, regex, workdir, command.split(), strace_logdir)
-    return filenames
-
-
-def strace_build_with_make_clean(switch: str,
-                                 coq_project_name: str,
-                                 coq_project_path: str,
-                                 regex: str,
-                                 workdir: Optional = None,
-                                 ) -> list[str]:
-    """
-    Builds the give coq-project & returns a list of pycoq context filenames after opam build of a package;
-    monitoring calls with (linux's) strace (to get the pycoq context filenames).
-    """
-    logging.info(f'{strace_build_with_make_clean=}')
-    # - activate switch
-    opam_set_switch_via_python_subprocess(switch)
-
-    # - pins opam proj ref: https://discuss.ocaml.org/t/what-is-the-difference-between-opam-pin-and-opam-install-when-to-use-one-vs-the-other/10942/3
-    # pin_coq_project(switch, coq_project_name, coq_project_path)
-
-    # - get coqc e.g. executable='~/.opam/ocaml-variants.4.07.1+flambda_coq-serapi.8.11.0+0.11.1/bin/coqc'
-    executable: str = check_switch_has_coqc_and_return_path_2_coqc_excutable(switch)
-
-    # - build with make clean -C and strace it
-    # command: str = f'make clean -C {coq_project_path}'
-    logging.info(f'{os.getcwd()=}')
-    logging.info(f'{coq_project_path=}')
-    os.chdir(coq_project_path)
-    logging.info(f'{os.getcwd()=}')
-    workdir = coq_project_path
-    logging.info(f'{workdir=}')
-
-    command: str = f'make clean'
-    logging.info(f'{command=}')
-    strace_logdir = pycoq.config.get_strace_logdir()
-    logging.info(f"{executable}, {regex}, {workdir}, {command} {strace_logdir}")
-    filenames: list[str] = pycoq.trace.strace_build(executable, regex, workdir, command.split(), strace_logdir)
+    build_command: str = 'make' if build_command == '' or build_command is None else build_command
+    build_commands: list[str] = build_command.split('&&')
+    build_commands: list[str] = ['make clean'] + build_commands if make_clean_coq_proj else build_commands
+    filenames: list[str] = []
+    for build_cmd in build_commands:
+        build_cmd: str = f'opam exec --switch {switch} -- {build_cmd}'
+        logging.info(f"{executable}, {regex}, {workdir}, {build_cmd} {strace_logdir}")
+        result: list[str] = pycoq.trace.strace_build(executable, regex, workdir, build_cmd, strace_logdir)
+        filenames.extend(result)
+    # - return filenames from pycoq context e.g. ['/afs/cs.stanford.edu/u/brando9/proverbot9001/coq-projects/constructive-geometry/problems.v._pycoq_context', ...,] ok if you save this it needs to go to the data set dir since it's server dependent/absolute path depedent.
     return filenames
 
 
 def check_switch_has_coqc_and_return_path_2_coqc_excutable(switch: str) -> str:
-    """
-    e.g. executable='~/.opam/coq-8.10/bin/coqc'
-    """
+    """ e.g. executable='~/.opam/coq-8.10/bin/coqc' """
     executable: str = opam_executable('coqc', switch)
     if executable is None:
         logging.critical(f"coqc executable is not found in {switch}")

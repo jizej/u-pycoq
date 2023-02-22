@@ -163,7 +163,7 @@ def parse_strace_logdir(logdir: str, executable: str, regex: str) -> List[str]:
 def strace_build(executable: str,
                  regex: str,
                  workdir: Optional[str],
-                 command: List[str],
+                 command: str,
                  strace_logdir=None,
                  env: Optional[dict] = None,
                  ) -> List[str]:
@@ -183,47 +183,44 @@ def strace_build(executable: str,
         - wontfix: replacing strace in mac: https://stackoverflow.com/questions/73724074/how-to-call-an-equivalent-command-to-strace-on-mac-ideally-from-python
     """
     print('---- Calling strace_build ----')
+    if '&&' in command:
+        raise ValueError(f'Your command has the &&. You cant do this since bash will parse instead of the entire'
+                         f'command as (... && ...) etc only the first part before the first && will be given to '
+                         f'strace. {command=}')
 
     def _strace_build(executable, regex, workdir, command, logdir):
         logfname = os.path.join(logdir, 'strace.log')
         logging.info(f"pycoq: tracing {executable} accesing {regex} while "
                      f"executing {command} from {workdir} with "
                      f"curdir {os.getcwd()}")
-        print(f"pycoq: tracing {executable} accesing {regex} while "
-              f"executing {command} from {workdir} with "
-              f"curdir {os.getcwd()}")
+        # print(f"pycoq: tracing {executable} accesing {regex} while "
+        #       f"executing {command} from {workdir} with "
+        #       f"curdir {os.getcwd()}")
+        # os.chdir(coq_project_path)
         print(f'{executable=}')
         print(f'{regex=}')
         print(f'{workdir=}')
         print(f'{command=}')
         print(f'curdir: {os.getcwd()=}')
-        with subprocess.Popen(['strace', '-e', 'trace=execve',
-                               '-v', '-ff', '-s', '100000000',
-                               '-xx', '-ttt',
-                               '-o', logfname] + command,
-                              cwd=workdir,
-                              text=True,
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE,
-                              env=env,
-                              ) as proc:
+        strace_cmd_prefix: str = f'strace -e trace=execve -v -ff -s 100000000 -xx -ttt -o {logfname}'
+        strace_cmd: str = f'{strace_cmd_prefix} {command}'
+        logging.info(f'{strace_cmd=}')
+        with subprocess.Popen(strace_cmd.split(), cwd=workdir, text=True, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, env=env) as proc:
             lines = list(iter(proc.stdout.readline, ''))
-            print(f'{lines=}')
-            logging.info(f'{lines=}')
-            # for line in iter(proc.stdout.readline, ''):
+            err = proc.stderr.read()
+            print(f'\n---->>> begin: lines form result form running {strace_cmd=} <<<----')
+            print(f'{err}')
+            logging.info(f'{err=}')
             for line in lines:
-                logging.debug(f"strace stdout: {line}")
+                print(f'line: {line}')
                 print(f"strace stdout: {line=}")
+                logging.debug(f"strace stdout: {line}")
             logging.info(f"strace stderr: {proc.stderr.read()=} waiting strace to finish...")
             proc.wait()
-        print(f'----> strace finished: {command=}')
-        logging.info(f'----> strace finished: {command=}')
+            print(f'---->>> end: lines form result form running {strace_cmd=} <<<----\n')
         result: list[str] = parse_strace_logdir(logdir, executable, regex)
-        print(f'{result=}')
-        logging.info(f'{result=}')
-
         print(f'---->> Done with strace_build {strace_build=} <<----')
-        st()
         return result
 
     if strace_logdir is None:
