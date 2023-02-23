@@ -9,6 +9,8 @@ import time
 from typing import List, Union, Tuple, Optional
 
 import pycoq.kernel
+from pycoq.kernel import LocalKernel
+from pycoq.common import LocalKernelConfig
 
 from dataclasses import dataclass
 from collections.abc import Iterable
@@ -95,7 +97,7 @@ def parse_coqexn(line: str):
 
 class CoqSerapi():
     """ 
-    object of CoqSerapi provides communication with coq through coq-serapi interface
+    object of CoqSerapi provides communication with coq through coq-serapi interface through the self._kernel object
 
     initialise by passing either a kernel object that has interface
 
@@ -107,27 +109,15 @@ class CoqSerapi():
 
     """
 
-    def __init__(self, kernel_or_cfg: Union[pycoq.kernel.LocalKernel, pycoq.common.LocalKernelConfig], logfname=None):
+    def __init__(self, kernel: LocalKernel, logfname=None):
         """ 
         wraps coq-serapi interface on the running kernel object
         """
-        self._logfname = logfname
-        self.kernel_or_cfg = kernel_or_cfg
-        if isinstance(kernel_or_cfg, pycoq.kernel.LocalKernel):
-            # weird, this one has the cfg: LocalKernelConfig, why doesn't it just assign it to self._cfg = kernel_or_cfg.cfg?
-            self._kernel = kernel_or_cfg
-            self._cfg = None
-        elif isinstance(kernel_or_cfg, pycoq.common.LocalKernelConfig):  # <- most common?
-            # has, command: List[str], env: Dict[str, str], pwd: str = os.getcwd()
-            self._kernel = None
-            self._cfg = kernel_or_cfg
-            # await self.start() # can't be called here since def is not async but it seems to be needed! or create ur own kernel
-        else:
-            raise TypeError("CoqSerapi class must be initialized either with an existing kernel "
-                            "object of type pycoq.kernel.LocalKernel or config object of type "
-                            " pycoq.common.LocalKernelConfig "
-                            f"but the supplied argument has type {type(kernel_or_cfg)}")
+        self._logfname = logfname  # seems to log to responses from coq serapi to ._serapi_log logfile (not sure why)
+        self._kernel: pycoq.kernel.LocalKernel = kernel  # object that can start the background coq-serapi process
+        self._cfg: LocalKernelConfig = self._kernel.cfg  # config of the (coq serapi) kernel (which runs the serapi)
 
+        # serapi command history for this CoqSerapi object/instance
         self._sent_history = []
         self._serapi_response_history = []
         self._added_sids = []
@@ -135,16 +125,10 @@ class CoqSerapi():
         # import serlib.parser
         # self.parser = serlib.parser.SExpParser()
         self._queried_local_ctx_and_goals = []
-
-    async def start(self):
-        """ starts new kernel if not already connected
-        """
-        if self._kernel is None:
-            self._kernel = pycoq.kernel.LocalKernel(self._cfg)
-            await self._kernel.start()
+        # note: self.__aenter__() calls self.start() which starts the kernel proc (serapi)
 
     async def __aenter__(self):
-        await self.start()
+        await self._kernel.start()
         return self
 
     async def __aexit__(self, exception_type, exception_value, traceback):
@@ -341,13 +325,11 @@ class CoqSerapi():
                           \nn + 0 = n"))))
             (Answer 3 Completed)
         """
-        st()
         from sexpdata import loads
 
         _local_ctx_and_goals: str = await self.query_goals_completed(opts='(pp ((pp_format PpStr)))')
         _local_ctx_and_goals: list = loads(_local_ctx_and_goals)
-        # print(f'{_local_ctx_and_goals=}')
-        assert _local_ctx_and_goals[0].value() == 'ObjList'
+        assert str(_local_ctx_and_goals[0]) == 'ObjList'
         if _local_ctx_and_goals[1] == []:
             return []  # if not in proof mode there is no coq-str obj so return empty list
         else:
@@ -355,7 +337,7 @@ class CoqSerapi():
             obj_list: list = _local_ctx_and_goals[1]
             coq_str_sexp: list = obj_list[0]  # e.g. (CoqString "")
             assert len(coq_str_sexp) == 2
-            assert coq_str_sexp[0].value() == 'CoqString'
+            assert str(coq_str_sexp[0]) == 'CoqString'
             # local_ctx_and_goals: str = _local_ctx_and_goals[1][0][1]
             local_ctx_and_goals: str = coq_str_sexp[1]
             return local_ctx_and_goals
@@ -553,12 +535,12 @@ class CoqSerapi():
         message: list = contents[-1]
         assert len(message) == 5
         string: list = message[-1]
-        assert string[0].value() == 'str'
+        assert str(string[0]) == 'str'
         # - edge case if the sexpdata sees an atom that is a string it didn't wrap it in a Symbol for some reason
         if isinstance(string[-1], str):
             ppt: str = string[-1]
         else:
-            ppt: str = string[-1].value()
+            ppt: str = str(string[-1])
         return ppt
 
     async def query_definition_completed(self, name) -> str:
@@ -884,10 +866,8 @@ async def execute(stmt: str, coq: CoqSerapi) -> Union[str, list]:
     """
     Execute a Coq statement.
     """
-    print(f'{coq.kernel_or_cfg=}')
     _, _, coq_exc, _ = await coq.execute(stmt)
     goals: Union[str, list] = await coq.query_local_ctx_and_goals()
-    st()
     # - store the goals (and local context) so that you can later check what your previous coq stmt & do nice things like know if you've proved the top level thm.
     coq._queried_local_ctx_and_goals.append(goals)
 
@@ -898,3 +878,28 @@ async def execute(stmt: str, coq: CoqSerapi) -> Union[str, list]:
         raise Exception(coq_exc[0])
         # raise coq_exc[0]
     return goals
+
+
+# - test, examples, tutorials
+
+def playground_sexpdata():
+    import sexpdata
+    from sexpdata import Symbol
+
+    _local_ctx_and_goals = [Symbol('ObjList'), []]
+    print(_local_ctx_and_goals)
+    print(_local_ctx_and_goals[0])
+    print(str(_local_ctx_and_goals[0]))
+    print(type(_local_ctx_and_goals[0]))
+    print(sexpdata.__version__)
+    print()
+
+
+# - run __main__
+
+if __name__ == '__main__':
+    import time
+
+    start = time.time()
+    playground_sexpdata()
+    print(f'Done {start - time.time()}')

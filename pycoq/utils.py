@@ -5,6 +5,8 @@ from pathlib import Path
 from pycoq.common import CoqContext, LocalKernelConfig
 from pycoq.serapi import CoqSerapi
 
+import os
+
 from pdb import set_trace as st
 
 
@@ -47,15 +49,14 @@ async def get_coq_serapi(coq_ctxt: CoqContext) -> CoqSerapi:
         import pycoq
         from pycoq import opam
         from pycoq.common import LocalKernelConfig
-        import os
+        from pycoq.kernel import LocalKernel
 
-        # - note you can't return the coq_ctxt here so don't create it due to how context managers work, even if it's needed layer for e.g. stmt in pycoq.split.coq_stmts_of_context(coq_ctxt):
-        # cfg: LocalKernelConfig = opam.opam_serapi_cfg(coq_ctxt)  # legacy, had switch hardcoded
         cfg: LocalKernelConfig = opam.get_opam_serapi_cfg_for_coq_ctxt(coq_ctxt)
         logfname = pycoq.common.serapi_log_fname(os.path.join(coq_ctxt.pwd, coq_ctxt.target))
+        print(f'{logfname=}')
+        kernel: LocalKernel = LocalKernel(cfg)
         # - needed to be returned to talk to coq
-        coq: CoqSerapi = pycoq.serapi.CoqSerapi(cfg, logfname=logfname)
-        # - crucial, or coq._kernel is None and .execute won't work
+        coq: CoqSerapi = pycoq.serapi.CoqSerapi(kernel, logfname=logfname)
         await coq.__aenter__()  # calls self.start(), this  must be called by itself in the with stmt beyond yield
         yield coq
     except Exception as e:

@@ -13,6 +13,8 @@ KernelConfig = Union[LocalKernelConfig, RemoteKernelConfig]
 
 PIPE_BUFFER_LIMIT = 2048 * 1024 * 1024  # 2048 Mb
 
+from pdb import set_trace as st
+
 
 async def readline(stream, timeout=None) -> str:
     """ reads line from stream 
@@ -57,11 +59,19 @@ class LocalKernel():
 
     async def start(self):
         """
+        Starts serapi process through the "sertop" command in cmd. What seems to happen is that sertop is a interactive
+        Read-Print-Eval-Loop (i.e. SerAPI Coq Toplevel) that does just that for coq stmts sent it.
+        Thus this .start() essentially starts a SerAPI top level process (in the backround) that is ready to
+        accept coq stmts.
+
+        ref:
+            - sertop/serapi: https://github.com/ejgallego/coq-serapi#quick-overview-and-install
         """
         cfg = self.cfg
         cmd = cfg.command
         env = cfg.env
         cwd = cfg.pwd
+        print(f'{cmd=}')
         self._proc = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
