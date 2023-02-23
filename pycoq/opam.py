@@ -37,7 +37,6 @@ COQ_REPO = "coq-released"
 COQ_REPO_SOURCE = "https://coq.inria.fr/opam/released"
 SWITCH_INSTALLED_ERROR = "[ERROR] There already is an installed switch named"
 COQ_SERAPI = "coq-serapi"
-# COQ_SERAPI_PIN = "8.13.0+0.13.0"
 COQ_SERAPI_PIN = "8.11.0+0.11.1"
 COQ_EXTRA_WARNING = ['-w', '-projection-no-head-constant',
                      '-w', '-redundant-canonical-projection',
@@ -523,6 +522,7 @@ async def opam_coqtop_stmts(coq_ctxt: pycoq.common.CoqContext,
     return ans, err, proc.returncode
 
 
+# legacy, I don't recommend using it, has switch hardcoded!?
 def opam_serapi_cfg(coq_ctxt: pycoq.common.CoqContext = None,
                     coq_serapi=COQ_SERAPI,
                     coq_serapi_pin=COQ_SERAPI_PIN,
@@ -535,7 +535,8 @@ def opam_serapi_cfg(coq_ctxt: pycoq.common.CoqContext = None,
                                            target='default_shell')
 
     iqr_args = pycoq.common.serapi_args(coq_ctxt.IQR())
-    switch = opam_switch_name(compiler, coq_serapi, coq_serapi_pin)
+    # switch = opam_switch_name(compiler, coq_serapi, coq_serapi_pin)  # likely bad line
+    switch = coq_ctxt.get_switch_name()
     debug_option = ['--debug'] if debug else []
 
     command = (['opam', 'exec']
@@ -549,6 +550,27 @@ def opam_serapi_cfg(coq_ctxt: pycoq.common.CoqContext = None,
     return pycoq.common.LocalKernelConfig(command=command,
                                           env=None,
                                           pwd=coq_ctxt.pwd)
+
+
+def get_opam_serapi_cfg_for_coq_ctxt(coq_ctxt: pycoq.common.CoqContext,
+                                     debug=False,
+                                     ) -> LocalKernelConfig:
+    """  Returns serapi cfg from coq_ctxt """
+    iqr_args = pycoq.common.serapi_args(coq_ctxt.IQR())
+    switch: str = coq_ctxt.get_switch_name()
+    debug_option = ['--debug'] if debug else []
+
+    # builds actualy command that talks to running serapi process
+    command = (['opam', 'exec']
+               + root_option()
+               + ['--switch', switch]
+               + ['--', 'sertop']
+               + iqr_args
+               + ['--topfile', coq_ctxt.target]
+               + debug_option)
+
+    # return pycoq.common.LocalKernelConfig(command=command, env=None,  pwd=coq_ctxt.pwd)
+    return pycoq.common.LocalKernelConfig(command=command, env=coq_ctxt.env,  pwd=coq_ctxt.pwd)
 
 
 def log_query_goals_error(_serapi_goals, serapi_goals, serapi_goals_legacy):
@@ -672,7 +694,7 @@ def opam_original_pycoq_pre_setup(coq_package: str,
 
 def strace_build_coq_project_and_get_filenames(coq_proj: CoqProj,
                                                regex_to_get_filenames: Optional[str] = None,
-                                               make_clean_coq_proj: bool = True,
+                                               make_clean_coq_proj: bool = False,
                                                ) -> list[str]:
     """
     Builds the give coq-project & returns a list of pycoq context filenames after opam build of a package;

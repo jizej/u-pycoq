@@ -50,9 +50,8 @@ async def get_coq_serapi(coq_ctxt: CoqContext) -> CoqSerapi:
         import os
 
         # - note you can't return the coq_ctxt here so don't create it due to how context managers work, even if it's needed layer for e.g. stmt in pycoq.split.coq_stmts_of_context(coq_ctxt):
-        # _coq_ctxt: CoqContext = pycoq.common.load_context(coq_filepath)
-        # - not returned since it seems its only needed to start the coq-serapi interface
-        cfg: LocalKernelConfig = opam.opam_serapi_cfg(coq_ctxt)
+        # cfg: LocalKernelConfig = opam.opam_serapi_cfg(coq_ctxt)  # legacy, had switch hardcoded
+        cfg: LocalKernelConfig = opam.get_opam_serapi_cfg_for_coq_ctxt(coq_ctxt)
         logfname = pycoq.common.serapi_log_fname(os.path.join(coq_ctxt.pwd, coq_ctxt.target))
         # - needed to be returned to talk to coq
         coq: CoqSerapi = pycoq.serapi.CoqSerapi(cfg, logfname=logfname)
@@ -148,14 +147,6 @@ async def loop_through_files():
 def clean_up_filename(filename: str, replace_dtr: str = '') -> str:
     filename = filename.replace('._pycoq_context', replace_dtr)
     return filename
-
-
-
-
-
-
-
-
 
 
 if __name__ == '__main__':

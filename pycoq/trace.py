@@ -219,6 +219,7 @@ def strace_build(executable: str,
             logging.info(f"strace stderr: {proc.stderr.read()=} waiting strace to finish...")
             proc.wait()
             print(f'---->>> end: lines form result form running {strace_cmd=} <<<----\n')
+        # - parse strace log and create filename._pycoq_context info
         result: list[str] = parse_strace_logdir(logdir, executable, regex)
         print(f'---->> Done with strace_build {strace_build=} <<----')
         return result

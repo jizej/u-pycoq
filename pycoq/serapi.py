@@ -1,12 +1,6 @@
 '''
 functions to work with coq-serapi
 '''
-
-# TODO: replace print with logging
-
-# TODO: in wait for answer completed if received 
-# (Of_sexp_error"sertop/sertop_ser.ml.cmd_of_sexp: sum tag \"Query\" has incorrect number of arguments"(invalid_sexp(Query((pp((pp_format PpCoq))))Definition th13)))
-# then stop waiting and return error
 import logging
 import re
 import json
@@ -109,7 +103,7 @@ class CoqSerapi():
         kernel.readlines()
         kernel.writeline()
         
-    of config defined by the protocol pycoq.kernel.LocalKernel
+    of config defined by the protocol: pycoq.kernel.LocalKernel
 
     """
 
@@ -118,10 +112,13 @@ class CoqSerapi():
         wraps coq-serapi interface on the running kernel object
         """
         self._logfname = logfname
+        self.kernel_or_cfg = kernel_or_cfg
         if isinstance(kernel_or_cfg, pycoq.kernel.LocalKernel):
+            # weird, this one has the cfg: LocalKernelConfig, why doesn't it just assign it to self._cfg = kernel_or_cfg.cfg?
             self._kernel = kernel_or_cfg
             self._cfg = None
-        elif isinstance(kernel_or_cfg, pycoq.common.LocalKernelConfig):
+        elif isinstance(kernel_or_cfg, pycoq.common.LocalKernelConfig):  # <- most common?
+            # has, command: List[str], env: Dict[str, str], pwd: str = os.getcwd()
             self._kernel = None
             self._cfg = kernel_or_cfg
             # await self.start() # can't be called here since def is not async but it seems to be needed! or create ur own kernel
@@ -344,6 +341,7 @@ class CoqSerapi():
                           \nn + 0 = n"))))
             (Answer 3 Completed)
         """
+        st()
         from sexpdata import loads
 
         _local_ctx_and_goals: str = await self.query_goals_completed(opts='(pp ((pp_format PpStr)))')
@@ -886,8 +884,10 @@ async def execute(stmt: str, coq: CoqSerapi) -> Union[str, list]:
     """
     Execute a Coq statement.
     """
+    print(f'{coq.kernel_or_cfg=}')
     _, _, coq_exc, _ = await coq.execute(stmt)
     goals: Union[str, list] = await coq.query_local_ctx_and_goals()
+    st()
     # - store the goals (and local context) so that you can later check what your previous coq stmt & do nice things like know if you've proved the top level thm.
     coq._queried_local_ctx_and_goals.append(goals)
 
