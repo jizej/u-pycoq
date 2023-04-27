@@ -115,8 +115,18 @@ class CoqSerapi():
         """
         self._logfname = logfname  # seems to log to responses from coq serapi to ._serapi_log logfile (not sure why)
         self._kernel: pycoq.kernel.LocalKernel = kernel  # object that can start the background coq-serapi process
-        self._cfg: LocalKernelConfig = self._kernel.cfg  # config of the (coq serapi) kernel (which runs the serapi)
-
+        # self._cfg: LocalKernelConfig = self._kernel.cfg  # config of the (coq serapi) kernel (which runs the serapi)
+        if isinstance(kernel, pycoq.kernel.LocalKernel):
+            self._kernel = kernel
+            self._cfg = None
+        elif isinstance(kernel, pycoq.common.LocalKernelConfig):
+            self._kernel = None
+            self._cfg = kernel
+        else:
+            raise TypeError("CoqSerapi class must be initialized either with an existing kernel "
+                            "object of type pycoq.kernel.LocalKernel or config object of type "
+                            " pycoq.common.LocalKernelConfig "
+                            f"but the supplied argument has type {type(kernel)}")
         # serapi command history for this CoqSerapi object/instance
         self._sent_history = []
         self._serapi_response_history = []
@@ -126,9 +136,16 @@ class CoqSerapi():
         # self.parser = serlib.parser.SExpParser()
         self._queried_local_ctx_and_goals = []
         # note: self.__aenter__() calls self.start() which starts the kernel proc (serapi)
+        
+    async def start(self):
+        """ starts new kernel if not already connected
+        """
+        if (self._kernel is None):
+            self._kernel = pycoq.kernel.LocalKernel(self._cfg)
+            await self._kernel.start()
 
     async def __aenter__(self):
-        await self._kernel.start()
+        await self.start()
         return self
 
     async def __aexit__(self, exception_type, exception_value, traceback):

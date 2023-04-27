@@ -105,8 +105,8 @@ def list_dict_splits_2_list_splits(coq_projs: list[dict], path_2_coq_projs: Path
 # -- get the config file/meta-data for the coq projects as a Coq Projs object
 
 def get_lf_coq_projs() -> CoqProjs:
-    path_2_coq_projs: Path = Path('~/pycoq/debug_proj_pycoq_lf/').expanduser()
-    path_2_coq_projs_json_splits: Path = Path('~/pycoq/lf_projs_splits.json').expanduser()
+    path_2_coq_projs: Path = Path('/home/jizej/Workspaces/icl4tp/u-pycoq/debug_proj_pycoq_lf/').expanduser()
+    path_2_coq_projs_json_splits: Path = Path('/home/jizej/Workspaces/icl4tp/u-pycoq/lf_projs_splits.json').expanduser()
     coq_projs: list[dict] = load_json(path_2_coq_projs_json_splits)
     logging.info(f'{coq_projs[0].keys()=}')
     coq_projs: list[CoqProj] = list_dict_splits_2_list_splits(coq_projs, path_2_coq_projs)
@@ -138,7 +138,7 @@ def get_compcert_coq_projs() -> CoqProjs:
 def get_coqgym_coq_projs(num_current_coqgym_projs: int = 124) -> CoqProjs:
     path_2_coq_projs: Path = Path('~/proverbot9001/coq-projects/').expanduser()
     print(f'{path_2_coq_projs=}')
-    path_2_coq_projs_json_splits: Path = Path('~/proverbot9001/coqgym_projs_splits.json').expanduser()
+    path_2_coq_projs_json_splits: Path = Path('/home/jizej/Workspaces/icl4tp/u-pycoq/coqgym_projs_splits.json').expanduser()
     print(f'{path_2_coq_projs_json_splits=}')
     coq_projs: list[dict] = load_json(path_2_coq_projs_json_splits)
     logging.info(f'{coq_projs[0].keys()=}')

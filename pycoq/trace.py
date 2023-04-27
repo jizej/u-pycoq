@@ -221,11 +221,13 @@ def strace_build(executable: str,
             print(f'---->>> end: lines form result form running {strace_cmd=} <<<----\n')
         # - parse strace log and create filename._pycoq_context info
         result: list[str] = parse_strace_logdir(logdir, executable, regex)
+        print("RESULT filenames:", result)
         print(f'---->> Done with strace_build {strace_build=} <<----')
         return result
 
     if strace_logdir is None:
         with tempfile.TemporaryDirectory() as _logdir:
+            print('logdir', _logdir)
             return _strace_build(executable, regex, workdir, command, _logdir)
     else:
         os.makedirs(strace_logdir, exist_ok=True)

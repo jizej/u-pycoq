@@ -22,7 +22,8 @@ DEFAULT_CONFIG = defaultdict(None, {
     "opam_root": None,
     "log_level": 4,
     # "log_filename": Path('~/pycoq.log').expanduser()
-    "log_filename": Path('~/data/pycoq.log').expanduser()
+    "log_filename": Path('~/data/pycoq.log').expanduser(),
+    "strace_logdir": Path('~/data/trace_log').expanduser()
 })
 
 PYCOQ_CONFIG_FILE = os.path.join(os.getenv('HOME'), '.pycoq')
@@ -110,6 +111,7 @@ def get_strace_logdir():
 
 
 def touch_file(path2file: str):
+    print('creating log file: ', path2file)
     Path(path2file).expanduser().touch()
 
 

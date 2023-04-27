@@ -174,8 +174,7 @@
             "theories/Tactics/Forward.v"
         ],
         "test_files": [],
-        "switch": "coq-8.12",
-        "original_switch": "coq-8.10"
+        "switch": "coq-8.12"
     },
     {
         "project_name": "amm11262",
@@ -2877,7 +2876,6 @@
         ],
         "test_files": [],
         "switch": "coq-8.15-failed",
-        "original_switch": "coq-8.10",
         "build_command": "make -C Metalib"
     },
     {
@@ -3000,7 +2998,6 @@
         ],
         "test_files": [],
         "switch": "coq-8.14-failed",
-        "original_switch": "coq-8.10",
         "build_command": "./configure && make"
     },
     {
@@ -3719,8 +3716,7 @@
             "first_page.v"
         ],
         "test_files": [],
-        "switch": "coq-8.10",
-        "original_switch": "coq-8.10"
+        "switch": "coq-8.10"
     },
     {
         "project_name": "orb-stab",
@@ -4781,8 +4777,7 @@
             "lib/FMapVeryWeak.v",
             "lib/Ssrexport.v"
         ],
-        "switch": "coq-8.14-failed",
-        "original_switch": "coq-8.12"
+        "switch": "coq-8.14-failed"
     },
     {
         "project_name": "zorns-lemma",

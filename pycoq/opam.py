@@ -336,7 +336,7 @@ def opam_executable(name: str, switch: str) -> Optional[str]:
     if not opam_check():
         return None
     command = (['opam', 'exec']
-               + root_option()
+            #    + root_option()
                + ['--switch', switch]
                + ['--', 'which', name])
     try:
@@ -345,13 +345,16 @@ def opam_executable(name: str, switch: str) -> Optional[str]:
                                 stderr=subprocess.PIPE)
         logging.info(f"{command}: {result.stdout.decode()} {result.stderr.decode()}")
         ans = result.stdout.decode().strip()
+        print(ans)
         if not os.path.isfile(ans):
             err_mgs: str = f"{name} obtained executing {command} and resolved to {ans} was not found "
+            print(err_mgs)
             logging.error(err_mgs)
             raise Exception(err_mgs)
         return ans
 
     except subprocess.CalledProcessError as error:
+        print(f"{command} returned {error.returncode}: {error.stdout.decode()} {error.stderr.decode()}")
         logging.critical(f"{command} returned {error.returncode}: {error.stdout.decode()} {error.stderr.decode()}")
         return None
 
@@ -535,8 +538,8 @@ def opam_serapi_cfg(coq_ctxt: pycoq.common.CoqContext = None,
                                            target='default_shell')
 
     iqr_args = pycoq.common.serapi_args(coq_ctxt.IQR())
-    # switch = opam_switch_name(compiler, coq_serapi, coq_serapi_pin)  # likely bad line
-    switch = coq_ctxt.get_switch_name()
+    switch = opam_switch_name(compiler, coq_serapi, coq_serapi_pin)  # likely bad line
+    # switch = coq_ctxt.get_switch_name()
     debug_option = ['--debug'] if debug else []
 
     command = (['opam', 'exec']
@@ -764,6 +767,7 @@ def strace_build_with_build_command(switch: str,
 
     # - build coq-proj
     strace_logdir = pycoq.config.get_strace_logdir()
+    print(f'{strace_logdir=}')
     build_command: str = 'make' if build_command == '' or build_command is None else build_command
     build_commands: list[str] = build_command.split('&&')
     build_commands: list[str] = ['make clean'] + build_commands if make_clean_coq_proj else build_commands
